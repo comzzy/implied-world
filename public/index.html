@@ -91,6 +91,7 @@
               <span id="lampLabel">—</span>
             </div>
             <div class="clock" id="clock">hours to cash open: —</div>
+            <div class="freeze-age" id="freezeAge" hidden></div>
           </div>
         </div>
 
@@ -121,7 +122,11 @@
               <input id="notional" type="number" min="100" step="100" value="5000" />
             </label>
             <button class="run" id="runBtn" type="button">Run desk</button>
-            <p class="run-progress" id="runProgress" hidden></p>
+            <div class="run-progress" id="runProgress" hidden>
+              <div class="run-progress-track" aria-hidden="true"><span class="run-progress-bar" id="runProgressBar"></span></div>
+              <p class="run-progress-msg" id="runProgressMsg"></p>
+              <p class="run-progress-stage" id="runProgressStage"></p>
+            </div>
             <p class="hint">
               Inputs are tagged. No orders are placed.
             </p>

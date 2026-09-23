@@ -181,22 +181,145 @@
     }
   }
 
+  let sessionTick = null;
+  let sessionHoursAt = null;
+  let sessionFrozenAt = null;
+  const reduceMotion =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function hoursFromFreeze(freeze) {
+    if (!freeze) return null;
+    const h =
+      freeze.hoursToCashOpen?.hours ??
+      freeze.hoursToOpen?.hours ??
+      null;
+    const n = Number(h);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function formatHoursLeft(h) {
+    if (h == null || !Number.isFinite(h)) return null;
+    const clamped = Math.max(0, h);
+    const whole = Math.floor(clamped);
+    const mins = Math.round((clamped - whole) * 60) % 60;
+    return whole + 'h ' + mins + 'm';
+  }
+
+  function updateClockFromSession() {
+    const clock = $('clock');
+    if (!clock) return;
+    if (sessionHoursAt == null) {
+      clock.textContent = 'hours to cash open: —';
+      return;
+    }
+    const elapsedH =
+      sessionFrozenAt != null ? (Date.now() - sessionFrozenAt) / 3600000 : 0;
+    const left = sessionHoursAt - elapsedH;
+    const label = formatHoursLeft(left);
+    clock.textContent =
+      label != null ? 'hours to cash open: ' + label : 'hours to cash open: n/a';
+  }
+
+  function updateFreezeAge() {
+    const el = $('freezeAge');
+    if (!el) return;
+    if (sessionFrozenAt == null) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    const sec = Math.max(0, Math.round((Date.now() - sessionFrozenAt) / 1000));
+    el.hidden = false;
+    el.classList.toggle('is-fresh', sec < 90);
+    el.classList.toggle('is-aging', sec >= 90);
+    if (sec < 60) el.textContent = 'freeze · ' + sec + 's ago';
+    else if (sec < 3600) el.textContent = 'freeze · ' + Math.floor(sec / 60) + 'm ago';
+    else el.textContent = 'freeze · ' + Math.floor(sec / 3600) + 'h ago';
+  }
+
+  function startSessionTick(freeze) {
+    sessionHoursAt = hoursFromFreeze(freeze);
+    sessionFrozenAt = Date.now();
+    updateClockFromSession();
+    updateFreezeAge();
+    if (sessionTick) clearInterval(sessionTick);
+    sessionTick = setInterval(() => {
+      updateClockFromSession();
+      updateFreezeAge();
+    }, 1000);
+  }
+
   function updateClock(freeze) {
-    const h = freeze?.hoursToOpen?.hours;
-    if (h == null) {
+    // Back-compat one-shot; prefer startSessionTick after a run.
+    sessionHoursAt = hoursFromFreeze(freeze);
+    if (sessionHoursAt == null) {
       $('clock').textContent = 'hours to cash open: n/a';
       return;
     }
-    const whole = Math.floor(h);
-    const mins = Math.round((h - whole) * 60);
-    $('clock').textContent = `hours to cash open: ${whole}h ${mins}m`;
+    updateClockFromSession();
   }
 
   function setLamp(lamp) {
     const el = $('lamp');
-    el.classList.remove('ALIGNED', 'CONTESTED');
-    if (lamp) el.classList.add(lamp);
+    el.classList.remove('ALIGNED', 'CONTESTED', 'is-live');
+    if (lamp) {
+      el.classList.add(lamp);
+      el.classList.add('is-live');
+    }
     $('lampLabel').textContent = lamp || '—';
+  }
+
+  function markResultsArrive() {
+    const desk = $('desk');
+    if (!desk) return;
+    desk.classList.remove('arrive-on');
+    // reflow so animation can replay
+    void desk.offsetWidth;
+    if (!reduceMotion) desk.classList.add('arrive-on');
+    const statusRow = document.querySelector('.status-row');
+    if (statusRow) {
+      statusRow.classList.add('is-live');
+      statusRow.querySelectorAll('.chip').forEach((chip) => {
+        chip.classList.remove('pulse-once');
+        void chip.offsetWidth;
+        if (!reduceMotion) chip.classList.add('pulse-once');
+      });
+    }
+    const canvas = $('decayCanvas');
+    if (canvas && !reduceMotion) {
+      canvas.classList.remove('arrive-on');
+      void canvas.offsetWidth;
+      canvas.classList.add('arrive-on');
+    }
+  }
+
+  function briefingHtml(br) {
+    if (!br) {
+      return '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';
+    }
+    return [
+      br.evidence &&
+        '<div class="brief-block"><strong>Evidence</strong>\n' +
+          esc(br.evidence) +
+          '</div>',
+      br.implied_world &&
+        '<div class="brief-block"><strong>Implied world</strong>\n' +
+          esc(br.implied_world) +
+          '</div>',
+      br.stress &&
+        '<div class="brief-block"><strong>Stress</strong>\n' + esc(br.stress) + '</div>',
+      br.considerations &&
+        '<div class="brief-block"><strong>Considerations</strong>\n' +
+          esc(br.considerations) +
+          '</div>',
+      br.invalidation &&
+        '<div class="brief-block"><strong>Invalidation</strong>\n' +
+          esc(br.invalidation) +
+          '</div>',
+    ]
+      .filter(Boolean)
+      .join('');
   }
 
   function setChip(el, text, cls) {
@@ -387,7 +510,8 @@
     }
 
     setLamp(data.lamp);
-    updateClock(data.freeze);
+    startSessionTick(data.freeze);
+    markResultsArrive();
     {
       const st = data.status || data.band?.status;
       const el = $('statusChip');
@@ -417,20 +541,11 @@
 
     const briefingEl = $('briefing');
     if (data.briefing) {
-      const br = data.briefing;
-      briefingEl.innerHTML = [
-        br.evidence && `<strong>Evidence</strong>\n${esc(br.evidence)}`,
-        br.implied_world && `<strong>Implied world</strong>\n${esc(br.implied_world)}`,
-        br.stress && `<strong>Stress</strong>\n${esc(br.stress)}`,
-        br.considerations && `<strong>Considerations</strong>\n${esc(br.considerations)}`,
-        br.invalidation && `<strong>Invalidation</strong>\n${esc(br.invalidation)}`,
-      ]
-        .filter(Boolean)
-        .join('\n\n');
+      briefingEl.innerHTML = briefingHtml(data.briefing);
     } else {
       // One compact muted line only — never stack a second fail-banner here.
       briefingEl.innerHTML =
-        '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';
+        '<span class="err">Writing research note…</span>';
     }
 
     const tw = data.twin;
@@ -562,10 +677,34 @@
     const t0 = Date.now();
     let tick = null;
     let wake = null;
-    const setProgress = (msg) => {
+    const stages = [
+      { at: 0, bar: 12, stage: 'Freezing cash last + wrapper' },
+      { at: 4, bar: 28, stage: 'Pulling BTC residual + calendar weight' },
+      { at: 9, bar: 48, stage: 'Solving implied band + stress' },
+      { at: 14, bar: 68, stage: 'Twin / factor / size checks' },
+      { at: 18, bar: 82, stage: 'Packaging desk numbers' },
+    ];
+    const msgEl = $('runProgressMsg');
+    const stageEl = $('runProgressStage');
+    const barEl = $('runProgressBar');
+    const setProgress = (sec) => {
       if (!progress) return;
       progress.hidden = false;
-      progress.textContent = msg;
+      progress.classList.add('is-running');
+      let cur = stages[0];
+      for (const s of stages) {
+        if (sec >= s.at) cur = s;
+      }
+      const bar = Math.min(92, cur.bar + Math.max(0, sec - cur.at));
+      if (barEl) barEl.style.width = bar + '%';
+      if (msgEl) {
+        msgEl.textContent =
+          'Still working… ' + sec + 's — keep this screen on';
+      } else {
+        progress.textContent =
+          'Still working… ' + sec + 's — keep this screen on';
+      }
+      if (stageEl) stageEl.textContent = cur.stage;
     };
     try {
       if (navigator.wakeLock && navigator.wakeLock.request) {
@@ -577,9 +716,9 @@
       }
       tick = setInterval(() => {
         const sec = Math.round((Date.now() - t0) / 1000);
-        setProgress('Still working… ' + sec + 's — keep this screen on');
+        setProgress(sec);
       }, 1000);
-      setProgress('Still working… 0s — keep this screen on');
+      setProgress(0);
 
       const body = {
         symbol: $('symbol').value,
@@ -645,7 +784,10 @@
       if (tick) clearInterval(tick);
       if (progress) {
         progress.hidden = true;
-        progress.textContent = '';
+        progress.classList.remove('is-running');
+        if (msgEl) msgEl.textContent = '';
+        if (stageEl) stageEl.textContent = '';
+        if (barEl) barEl.style.width = '8%';
       }
       if (wake) {
         try {
@@ -707,19 +849,7 @@
           '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';
         return;
       }
-      const br = j.briefing;
-      briefingEl.innerHTML = [
-        br.evidence && '<strong>Evidence</strong>\n' + esc(br.evidence),
-        br.implied_world &&
-          '<strong>Implied world</strong>\n' + esc(br.implied_world),
-        br.stress && '<strong>Stress</strong>\n' + esc(br.stress),
-        br.considerations &&
-          '<strong>Considerations</strong>\n' + esc(br.considerations),
-        br.invalidation &&
-          '<strong>Invalidation</strong>\n' + esc(br.invalidation),
-      ]
-        .filter(Boolean)
-        .join('\n\n');
+      briefingEl.innerHTML = briefingHtml(j.briefing);
     } catch (err) {
       briefingEl.innerHTML =
         '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';

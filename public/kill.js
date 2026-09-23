@@ -281,9 +281,11 @@
           c.light_plain ||
           (light === 'GREEN' ? 'Clear' : light === 'AMBER' ? 'Watch' : 'Firing');
         return (
-          '<article class="kill-row" data-idx="' +
+          '<article class="kill-row arrive-on" data-idx="' +
           i +
-          '">' +
+          '" style="animation-delay:' +
+          (i * 0.06) +
+          's">' +
           '<div class="kill-light ' +
           light +
           '" title="' +
@@ -324,6 +326,10 @@
         );
       })
       .join('');
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      root.querySelectorAll('.kill-row').forEach((el) => el.classList.remove('arrive-on'));
+    }
+
 
     root.querySelectorAll('.kill-row').forEach((row) => {
       const idx = Number(row.getAttribute('data-idx'));

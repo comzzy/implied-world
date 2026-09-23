@@ -1666,3 +1666,168 @@ table.dense tr.die td { color: var(--bad); }
   max-width: 52rem;
   line-height: 1.45;
 }
+
+
+/* —— live desk motion (light; respect reduced-motion) —— */
+.freeze-age {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.freeze-age.is-fresh { color: var(--ok, #1f6b3a); }
+.freeze-age.is-aging { color: var(--muted); }
+
+.lamp-dot {
+  box-shadow: 0 0 0 0 transparent;
+}
+.lamp.ALIGNED .lamp-dot,
+.lamp.CONTESTED .lamp-dot,
+.lamp.is-live .lamp-dot {
+  animation: lamp-breathe 2.4s ease-in-out infinite;
+}
+.lamp.ALIGNED .lamp-dot {
+  box-shadow: 0 0 0 0 rgba(31, 107, 58, 0.35);
+}
+.lamp.CONTESTED .lamp-dot {
+  box-shadow: 0 0 0 0 rgba(160, 48, 48, 0.35);
+}
+@keyframes lamp-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.85; }
+}
+
+.run-progress {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1.5px solid var(--ink);
+  background: rgba(37, 99, 235, 0.04);
+}
+.run-progress[hidden] { display: none !important; }
+.run-progress-track {
+  height: 3px;
+  background: rgba(26, 58, 107, 0.12);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.run-progress-bar {
+  display: block;
+  height: 100%;
+  width: 8%;
+  background: var(--accent, #1a3a6b);
+  transition: width 0.6s ease;
+}
+.run-progress.is-running .run-progress-bar {
+  animation: run-bar-pulse 1.4s ease-in-out infinite;
+}
+@keyframes run-bar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.run-progress-msg {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent, #1a3a6b);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.run-progress-stage {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.desk-results .panel {
+  opacity: 1;
+  transform: none;
+}
+.desk-results.arrive-on .panel {
+  animation: panel-arrive 0.55s ease both;
+}
+.desk-results.arrive-on .panel:nth-child(1) { animation-delay: 0.02s; }
+.desk-results.arrive-on .panel:nth-child(2) { animation-delay: 0.08s; }
+.desk-results.arrive-on .desk-tiles:nth-of-type(2) .panel:nth-child(1) { animation-delay: 0.12s; }
+.desk-results.arrive-on .desk-tiles:nth-of-type(2) .panel:nth-child(2) { animation-delay: 0.18s; }
+@keyframes panel-arrive {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.brief .brief-block {
+  display: block;
+  margin: 0 0 0.85em;
+  animation: brief-in 0.45s ease both;
+}
+.brief .brief-block:nth-child(1) { animation-delay: 0.05s; }
+.brief .brief-block:nth-child(2) { animation-delay: 0.12s; }
+.brief .brief-block:nth-child(3) { animation-delay: 0.18s; }
+.brief .brief-block:nth-child(4) { animation-delay: 0.24s; }
+.brief .brief-block:nth-child(5) { animation-delay: 0.3s; }
+@keyframes brief-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chip.pulse-once {
+  animation: chip-flash 0.7s ease;
+}
+@keyframes chip-flash {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(1.08); }
+  100% { filter: brightness(1); }
+}
+
+.canvas-wrap.arrive-on canvas,
+#decayCanvas.arrive-on {
+  animation: canvas-in 0.7s ease both;
+}
+@keyframes canvas-in {
+  from { opacity: 0.15; }
+  to { opacity: 1; }
+}
+
+.atlas-cell.arrive-on {
+  animation: panel-arrive 0.5s ease both;
+}
+.atlas-heat.arrive-on .atlas-cell:nth-child(1) { animation-delay: 0.04s; }
+.atlas-heat.arrive-on .atlas-cell:nth-child(2) { animation-delay: 0.1s; }
+.atlas-heat.arrive-on .atlas-cell:nth-child(3) { animation-delay: 0.16s; }
+
+.grid-lattice tbody tr.arrive-on td {
+  animation: cell-ink 0.35s ease both;
+}
+@keyframes cell-ink {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+.status-row.is-live .chip {
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+ .kill-row.arrive-on {
+  animation: panel-arrive 0.5s ease both;
+}
+.kill-light .dot {
+  animation: lamp-breathe 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kill-row.arrive-on,
+  .kill-light .dot,
+  .lamp.ALIGNED .lamp-dot,
+  .lamp.CONTESTED .lamp-dot,
+  .lamp.is-live .lamp-dot,
+  .run-progress.is-running .run-progress-bar,
+  .desk-results.arrive-on .panel,
+  .brief .brief-block,
+  .chip.pulse-once,
+  .atlas-cell.arrive-on,
+  .grid-lattice tbody tr.arrive-on td,
+  .canvas-wrap.arrive-on canvas,
+  #decayCanvas.arrive-on {
+    animation: none !important;
+  }
+}

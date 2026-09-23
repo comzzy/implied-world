@@ -248,10 +248,17 @@
           })
           .join('');
         return (
-          '<tr><th class="row-h">' + pctLabel(row.cashOpen) + '</th>' + cells + '</tr>'
+          '<tr class="arrive-on"><th class="row-h">' +
+          pctLabel(row.cashOpen) +
+          '</th>' +
+          cells +
+          '</tr>'
         );
       })
       .join('');
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      tbody.querySelectorAll('tr').forEach((tr) => tr.classList.remove('arrive-on'));
+    }
   }
 
   $('loadLast').addEventListener('click', () => {

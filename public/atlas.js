@@ -286,6 +286,13 @@
       })
       .join('');
 
+    heat.classList.remove('arrive-on');
+    void heat.offsetWidth;
+    if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      heat.classList.add('arrive-on');
+      heat.querySelectorAll('.atlas-cell').forEach((el) => el.classList.add('arrive-on'));
+    }
+
     const callout = $('breakCallout');
     callout.hidden = false;
     const kind = data.breakKind || 'none';
