@@ -1628,3 +1628,10 @@ table.dense tr.die td { color: var(--bad); }
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
+
+.freeze-saved-hint {
+  margin: 6px 0 0;
+  color: var(--ok, #1f6b3a);
+  font-size: 12px;
+}

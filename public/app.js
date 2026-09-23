@@ -27,18 +27,35 @@
   }
 
   function saveLastFreeze(data) {
+    if (!data?.freeze) return false;
+    const payload = JSON.stringify({
+      freeze: data.freeze,
+      band: data.band,
+      symbol: data.symbol || data.freeze.symbol,
+      at: new Date().toISOString(),
+    });
+    let ok = false;
     try {
-      if (!data?.freeze) return;
-      localStorage.setItem(
-        'iw:lastFreeze',
-        JSON.stringify({
-          freeze: data.freeze,
-          band: data.band,
-          symbol: data.symbol || data.freeze.symbol,
-          at: new Date().toISOString(),
-        })
-      );
-    } catch (_) { /* ignore quota / private mode */ }
+      localStorage.setItem('iw:lastFreeze', payload);
+      ok = true;
+    } catch (_) { /* quota / private */ }
+    try {
+      sessionStorage.setItem('iw:lastFreeze', payload);
+      ok = true;
+    } catch (_) { /* ignore */ }
+    return ok;
+  }
+
+  function readLastFreezeRaw() {
+    try {
+      return localStorage.getItem('iw:lastFreeze') || sessionStorage.getItem('iw:lastFreeze');
+    } catch (_) {
+      try {
+        return sessionStorage.getItem('iw:lastFreeze');
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   let state = null; // last API payload
@@ -356,9 +373,18 @@
 
   function renderDesk(data) {
     state = data;
+    const saved = saveLastFreeze(data);
     $('emptyState').hidden = true;
     renderDataQuality(data.freeze);
     $('desk').hidden = false;
+    const hint = $('freezeSavedHint');
+    if (hint) {
+      const sym = data.symbol || data.freeze?.symbol || '—';
+      hint.hidden = false;
+      hint.textContent = saved
+        ? 'Last freeze saved for Lattice / Kill board / Atlas · ' + sym
+        : 'Could not save freeze on this phone (storage blocked). Stay on Desk and open tools from the same browser.';
+    }
 
     setLamp(data.lamp);
     updateClock(data.freeze);

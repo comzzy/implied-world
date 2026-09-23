@@ -123,7 +123,11 @@
 
   function loadLastFreeze() {
     try {
-      const raw = localStorage.getItem('iw:lastFreeze');
+      let raw = null;
+      try { raw = localStorage.getItem('iw:lastFreeze'); } catch (_) {}
+      if (!raw) {
+        try { raw = sessionStorage.getItem('iw:lastFreeze'); } catch (_) {}
+      }
       if (!raw) {
         emptyState(
           'No last desk freeze. Run the Desk first, then Use last desk freeze.'
