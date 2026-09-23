@@ -343,9 +343,21 @@ app.post('/api/implied-world', async (req, res) => {
     let briefing = null;
     let briefing_error = null;
 
+    // Phone / flaky networks drop long POSTs. Prefer numbers-first unless caller asks.
+    const wantBriefing = body.wantBriefing === true || body.numbersOnly === false;
+    const skipBriefing =
+      body.skipBriefing === true ||
+      body.numbersOnly === true ||
+      (process.env.VERCEL && !wantBriefing);
+
     // 3. Research briefing if key present — never block numeric desk.
     // On Vercel, only spend leftover budget so the response returns before a 504.
-    if (hasKey()) {
+    if (skipBriefing) {
+      briefing = null;
+      briefing_error =
+        'Research briefing deferred so numbers return faster on phones and flaky networks.';
+      console.log('Qwen briefing skipped (numbers-first)');
+    } else if (hasKey()) {
       const elapsed = Date.now() - t0;
       const remaining = budgetMs - elapsed;
       const envCap = Number(process.env.QWEN_TIMEOUT_MS) || (process.env.VERCEL ? 22000 : 50000);

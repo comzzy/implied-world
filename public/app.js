@@ -530,41 +530,101 @@
 
   async function runDesk() {
     const btn = $('runBtn');
+    const progress = $('runProgress');
     btn.disabled = true;
     btn.textContent = 'Running…';
+    const t0 = Date.now();
+    let tick = null;
+    let wake = null;
+    const setProgress = (msg) => {
+      if (!progress) return;
+      progress.hidden = false;
+      progress.textContent = msg;
+    };
     try {
+      if (navigator.wakeLock && navigator.wakeLock.request) {
+        try {
+          wake = await navigator.wakeLock.request('screen');
+        } catch (_) {
+          /* phone may deny — still show timer */
+        }
+      }
+      tick = setInterval(() => {
+        const sec = Math.round((Date.now() - t0) / 1000);
+        setProgress('Still working… ' + sec + 's — keep this screen on');
+      }, 1000);
+      setProgress('Still working… 0s — keep this screen on');
+
       const body = {
         symbol: $('symbol').value,
         thesis: $('thesis').value,
         style: $('style').value,
         notionalUsdt: Number($('notional').value) || 5000,
+        numbersOnly: true,
+        skipBriefing: true,
       };
-      const r = await fetch('/api/implied-world', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const rawText = await r.text();
+
+      async function postOnce() {
+        const r = await fetch('/api/implied-world', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          keepalive: true,
+        });
+        const rawText = await r.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          const hint =
+            r.status === 504 || r.status === 502
+              ? 'Platform timeout — the desk ran too long. Try again.'
+              : (rawText || 'Non-JSON response').slice(0, 180);
+          const err = new Error(hint);
+          err._failureKind = r.status === 504 || r.status === 502 ? 'timeout' : 'server';
+          err._res = r;
+          err._data = { failureKind: err._failureKind, ok: false };
+          throw err;
+        }
+        if (!r.ok || data.ok === false) {
+          const err = new Error(data.failureMessage || data.error || 'Desk failed');
+          err._data = data;
+          err._res = r;
+          throw err;
+        }
+        return data;
+      }
+
       let data;
       try {
-        data = JSON.parse(rawText);
-      } catch {
-        const hint =
-          r.status === 504 || r.status === 502
-            ? 'Platform timeout — the desk ran too long. Try again; numbers-only is safer if the writeup is slow.'
-            : (rawText || 'Non-JSON response').slice(0, 180);
-        showDeskFailure(new Error(hint), { failureKind: r.status === 504 || r.status === 502 ? 'timeout' : 'server', ok: false }, r);
-        return;
-      }
-      if (!r.ok || data.ok === false) {
-        showDeskFailure(null, data, r);
-        return;
+        data = await postOnce();
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        const isNet = /Failed to fetch|NetworkError|offline|network/i.test(msg);
+        if (isNet && !err._data) {
+          setProgress('Connection dropped — retrying once…');
+          data = await postOnce();
+        } else if (err._data) {
+          showDeskFailure(err._data.ok === false ? null : err, err._data, err._res);
+          return;
+        } else {
+          throw err;
+        }
       }
       renderDesk(data);
-      // Soft writeup fail is already a single muted line inside #briefing via renderDesk.
     } catch (err) {
       showDeskFailure(err);
     } finally {
+      if (tick) clearInterval(tick);
+      if (progress) {
+        progress.hidden = true;
+        progress.textContent = '';
+      }
+      if (wake) {
+        try {
+          await wake.release();
+        } catch (_) {}
+      }
       btn.disabled = false;
       btn.textContent = 'Run desk';
     }

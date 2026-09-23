@@ -68,9 +68,10 @@ async function freezeInputs(symbol, opts = {}) {
   // BTC path has Bitget US + CoinGecko fallbacks inside fetchBtc24hReturn.
   // Nasdaq prefers Bitget US QQQ when Signal hangs. Event may stay assumed none.
   {
-    const btcMs = Number(process.env.SIGNAL_BTC_TIMEOUT_MS) || 12000;
-    const nasdaqMs = Number(process.env.SIGNAL_NASDAQ_TIMEOUT_MS) || 12000;
-    const eventMs = Number(process.env.SIGNAL_EVENT_TIMEOUT_MS) || 8000;
+    const onVercel = Boolean(process.env.VERCEL);
+    const btcMs = Number(process.env.SIGNAL_BTC_TIMEOUT_MS) || (onVercel ? 8000 : 12000);
+    const nasdaqMs = Number(process.env.SIGNAL_NASDAQ_TIMEOUT_MS) || (onVercel ? 8000 : 12000);
+    const eventMs = Number(process.env.SIGNAL_EVENT_TIMEOUT_MS) || (onVercel ? 5000 : 8000);
     const fail = (label, ms, source) => ({
       ok: false,
       value: label === 'event' ? 'none' : null,
@@ -270,8 +271,13 @@ async function freezeInputs(symbol, opts = {}) {
     };
   }
 
+  const peerBudgetMs = Number(process.env.PEER_PREMIUM_TIMEOUT_MS) || (process.env.VERCEL ? 10000 : 20000);
   const peerPremiums = usProbe.ok
-    ? await freezePeerPremiums(sym)
+    ? await withTimeout(
+        freezePeerPremiums(sym),
+        peerBudgetMs,
+        assumedPeerPremiums(sym, premiumField.value)
+      )
     : assumedPeerPremiums(sym, premiumField.value);
 
   return {
