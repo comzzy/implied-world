@@ -2,12 +2,12 @@
 
 A research desk for overnight US equity rTokens (NVDA, TSLA, AAPL).
 
-You freeze the weekend picture — cash last, wrapper last, BTC residual, hours to the next cash open — then see whether the live wrapper premium still has room into Monday. The desk does not place orders and does not tell you which side to take.
+You freeze the overnight picture — cash last, wrapper last, BTC residual, hours to the next cash open — then see whether the live wrapper premium still has room into that open. Styles cover weekend holds, event windows, and near-term wrapper checks on any day. The desk does not place orders and does not tell you which side to take.
 
 ## What you get
 
 - **Desk** — run a thesis, freeze tagged inputs, draw an implied-gap band, stress / twin / factor / size checks, optional research briefing from the frozen numbers only.
-- **Open Lattice** — Monday cash-open × BTC residual grid (room left / no room / unstable).
+- **Open Lattice** — next cash-open × BTC residual grid (room left / no room / unstable).
 - **Kill Board** — editable kill criteria with traffic lights against the last freeze.
 - **Contagion Atlas** — shock one name and see whether stress stays local or hits all three.
 - **Docs** — product guide, how to use, limits, roadmap, FAQ (`/docs`).

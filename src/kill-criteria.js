@@ -1,6 +1,6 @@
 /**
  * Kill Board — draft measurable falsification criteria from freeze + band.
- * No buy/sell language. Human locks criteria before Monday.
+ * No buy/sell language. Human locks criteria before the next cash open.
  */
 
 const { solve } = require('./solver');
@@ -78,7 +78,7 @@ function draftKillCriteria(freeze, band) {
       label: 'Not enough buyers/sellers with a live event',
       plain: sanitizeText(
         thin && eventLive
-          ? `Thin book in the wrapper plus a live ${eventClass} event is already an unstable setup — lock this as a kill if books stay thin into Monday.`
+          ? `Thin book in the wrapper plus a live ${eventClass} event is already an unstable setup — lock this as a kill if books stay thin into the next cash open.`
           : `If the wrapper does not have enough buyers and sellers while any calendar event is live, mark the setup unstable and step away.`
       ),
       check: {

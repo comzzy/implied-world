@@ -313,6 +313,77 @@ app.post('/api/atlas', async (req, res) => {
   }
 });
 
+app.post('/api/briefing', async (req, res) => {
+  const body = req.body || {};
+  const thesis = sanitizeText(String(body.thesis || ''));
+  const style = String(body.style || 'weekend_swing');
+  const freeze = body.freeze;
+  if (!freeze || typeof freeze !== 'object') {
+    return res.status(400).json({
+      ...failurePayload(new Error('Pass the desk freeze to draft the research note.'), {
+        kind: 'missing_data',
+        status: 400,
+      }),
+    });
+  }
+  if (!hasKey()) {
+    return res.status(503).json({
+      ...failurePayload(new Error('Research note key not configured.'), {
+        kind: 'writeup',
+        status: 503,
+      }),
+    });
+  }
+
+  try {
+    let band = body.band;
+    if (!band || band.implied_gap_mid == null) {
+      const band0 = solve(freeze);
+      const decay = decayBands(freeze, band0.stress_pad);
+      band = {
+        ...band0,
+        implied_gap_lo: decay.band_now.lo,
+        implied_gap_mid: decay.band_now.mid,
+        implied_gap_hi: decay.band_now.hi,
+        status: decay.band_now.status,
+        stress_pad: decay.band_now.pad,
+      };
+    }
+    const size = body.size || null;
+    const factor = body.factor || null;
+    const receipt = body.receipt || null;
+    const twin = body.twin || null;
+    const channels = body.channels || null;
+    const stress = body.stress || null;
+    const timeoutMs =
+      Number(body.timeoutMs) ||
+      Number(process.env.QWEN_TIMEOUT_MS) ||
+      (process.env.VERCEL ? 28000 : 50000);
+
+    const briefing = sanitizeObject(
+      await askQwenBriefing({
+        freeze,
+        band,
+        size,
+        factor,
+        receipt,
+        twin,
+        channels,
+        stress,
+        thesis,
+        style,
+        timeoutMs,
+      })
+    );
+    res.json({ ok: true, briefing, style, thesis });
+  } catch (err) {
+    res.status(502).json({
+      ...failurePayload(err, { kind: 'writeup', status: 502 }),
+      ok: false,
+    });
+  }
+});
+
 app.post('/api/implied-world', async (req, res) => {
   const body = req.body || {};
   const symbol = String(body.symbol || 'NVDA').toUpperCase();
@@ -511,9 +582,25 @@ function normalizePctArray(arr, fallbackPct, asDecimal) {
 async function askQwenBriefing(ctx) {
   const f = ctx.freeze || {};
   const hours = f.hoursToCashOpen || f.hoursToOpen || {};
+  const style = String(ctx.style || f.style || 'weekend_swing');
+  const thesis = String(ctx.thesis || f.thesis || '').slice(0, 400);
+  const STYLE_HORIZON = {
+    weekend_swing:
+      'Style weekend_swing: overnight or multi-session hold into the next US cash open. Not Monday-only — any calendar gap to the next open.',
+    event_window:
+      'Style event_window: through the named event window into the next US cash open.',
+    intraday_wrapper:
+      'Style intraday_wrapper: near-term wrapper room into the next cash open or same-session print.',
+  };
+  const horizon =
+    STYLE_HORIZON[style] ||
+    'Horizon: into the next US cash open for the chosen style (any day of the week).';
+
   // Compact frozen table only — not the entire response blob.
   const compact = {
     symbol: f.symbol,
+    style,
+    thesis: thesis || null,
     cash: numTag(f.cashClose),
     rtoken: numTag(f.rtoken),
     premium: numTag(f.premium),
@@ -527,22 +614,34 @@ async function askQwenBriefing(ctx) {
       lo: ctx.band?.implied_gap_lo,
       mid: ctx.band?.implied_gap_mid,
       hi: ctx.band?.implied_gap_hi,
+      pad: ctx.band?.stress_pad,
     },
     firstToDie: ctx.size?.first_to_die || ctx.size?.firstToDie || null,
     factor: ctx.factor?.verdict || null,
     lamp: ctx.receipt?.lamp || null,
   };
 
-  const timeoutMs = Number(ctx.timeoutMs) || Number(process.env.QWEN_TIMEOUT_MS) || (process.env.VERCEL ? 22000 : 50000);
+  const timeoutMs = Number(ctx.timeoutMs) || Number(process.env.QWEN_TIMEOUT_MS) || (process.env.VERCEL ? 28000 : 50000);
   const system =
-    'Writer for Implied World. ' +
+    'You write research notes for Implied World, an overnight US equity rToken desk. ' +
     'Output JSON only with keys: evidence, implied_world, stress, considerations, invalidation. ' +
-    'Total 4–6 short sentences across all keys. ' +
-    'Use ONLY numbers in the frozen table. ' +
-    'If a field tag is assumed or source_failed, say so. ' +
-    'No BUY/SELL/LONG/SHORT. No hype. No fillers. No invented prices.';
+    'Write like a senior desk note a PM would trust: concrete, calm, specific. ' +
+    'Each key gets 1–3 full sentences (about 8–12 sentences total). ' +
+    'evidence: what the frozen tags actually say (premium vs cash/wrapper, BTC residual, event, hours). ' +
+    'implied_world: what room (or lack of it) the band implies into the next cash open for this style — cite lo/mid/hi and status in percent terms. ' +
+    'stress: what breaks first and how twin/factor colour the picture. ' +
+    'considerations: what a careful reader still has to weigh (thin book, failed tags, calendar). ' +
+    'invalidation: the precise condition that kills the thesis (premium at/above band high, etc). ' +
+    'Use ONLY numbers and tags in the frozen table. If a tag is assumed or source_failed, say so plainly. ' +
+    'Never say BUY, SELL, LONG, SHORT, or recommend a side. No hype, slogans, or filler. No invented prices. ' +
+    'Do not assume the open is Monday — frame to the next US cash open for this style.';
 
-  const user = 'Frozen table:\n' + JSON.stringify(compact);
+  const user =
+    horizon +
+    '\nThesis: ' +
+    (thesis || '(none given)') +
+    '\nFrozen table:\n' +
+    JSON.stringify(compact);
 
   const raw = await Promise.race([
     chat({
@@ -552,8 +651,8 @@ async function askQwenBriefing(ctx) {
       ],
       json: true,
       timeoutMs,
-      maxTokens: Number(process.env.QWEN_MAX_TOKENS) || 420,
-      temperature: 0.15,
+      maxTokens: Number(process.env.QWEN_MAX_TOKENS) || 720,
+      temperature: 0.28,
     }),
     new Promise((_, reject) =>
       setTimeout(

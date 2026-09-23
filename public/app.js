@@ -638,6 +638,7 @@
         }
       }
       renderDesk(data);
+      fetchResearchBriefing(data);
     } catch (err) {
       showDeskFailure(err);
     } finally {
@@ -653,6 +654,75 @@
       }
       btn.disabled = false;
       btn.textContent = 'Run desk';
+    }
+  }
+
+
+  async function fetchResearchBriefing(data) {
+    const briefingEl = $('briefing');
+    if (!briefingEl || !data || !data.freeze) return;
+    briefingEl.innerHTML =
+      '<span class="err">Writing research note…</span>';
+    const body = {
+      thesis: data.thesis || ($('thesis') && $('thesis').value) || '',
+      style: data.style || ($('style') && $('style').value) || 'weekend_swing',
+      freeze: data.freeze,
+      band: data.band,
+      size: data.size,
+      factor: data.factor,
+      receipt: data.receipt,
+      twin: data.twin,
+      channels: data.channels,
+      stress: data.stress,
+    };
+    try {
+      let r;
+      try {
+        r = await fetch('/api/briefing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          keepalive: true,
+        });
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        if (/Failed to fetch|NetworkError|offline|network/i.test(msg)) {
+          r = await fetch('/api/briefing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            keepalive: true,
+          });
+        } else {
+          throw err;
+        }
+      }
+      const j = await r.json().catch(() => ({
+        ok: false,
+        error: r.statusText,
+        failureKind: 'writeup',
+      }));
+      if (!j.ok || !j.briefing) {
+        briefingEl.innerHTML =
+          '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';
+        return;
+      }
+      const br = j.briefing;
+      briefingEl.innerHTML = [
+        br.evidence && '<strong>Evidence</strong>\n' + esc(br.evidence),
+        br.implied_world &&
+          '<strong>Implied world</strong>\n' + esc(br.implied_world),
+        br.stress && '<strong>Stress</strong>\n' + esc(br.stress),
+        br.considerations &&
+          '<strong>Considerations</strong>\n' + esc(br.considerations),
+        br.invalidation &&
+          '<strong>Invalidation</strong>\n' + esc(br.invalidation),
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+    } catch (err) {
+      briefingEl.innerHTML =
+        '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';
     }
   }
 

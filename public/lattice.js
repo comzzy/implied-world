@@ -1,4 +1,4 @@
-/* Open Lattice — Monday open check for overnight rToken theses. Live desk freeze only. */
+/* Open Lattice — next cash open check for overnight rToken theses. Live desk freeze only. */
 (function () {
   const $ = (id) => document.getElementById(id);
 
