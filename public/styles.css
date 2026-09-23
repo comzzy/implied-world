@@ -1635,3 +1635,27 @@ table.dense tr.die td { color: var(--bad); }
   color: var(--ok, #1f6b3a);
   font-size: 12px;
 }
+
+
+.kill-how {
+  margin: 0 0 12px;
+  max-width: 52rem;
+  line-height: 1.45;
+}
+.kill-field-label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kill-row .lock.is-locked {
+  color: var(--ok, #1f6b3a);
+  font-weight: 700;
+}
+.kill-row textarea:disabled {
+  opacity: 0.85;
+  background: rgba(0, 0, 0, 0.03);
+  border-style: dashed;
+}

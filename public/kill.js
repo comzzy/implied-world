@@ -301,17 +301,23 @@
           '<h3>' +
           esc(c.label) +
           '</h3>' +
-          '<textarea data-field="plain" ' +
+          '<p class="kill-field-label">' +
+          (c.locked ? 'Locked kill rule' : 'Kill rule — edit if you want, then Lock') +
+          '</p>' +
+          '<textarea data-field="plain" rows="4" placeholder="e.g. If wrapper premium sits at or above the band high, the overnight idea has no room left." ' +
           (c.locked ? 'disabled' : '') +
           '>' +
-          escAttr(c.plain) +
+          esc(c.plain || '') +
           '</textarea>' +
           '</div>' +
           '<div class="kill-actions">' +
-          '<label class="lock">' +
+          '<label class="lock' +
+          (c.locked ? ' is-locked' : '') +
+          '">' +
           '<input type="checkbox" data-field="locked" ' +
           (c.locked ? 'checked' : '') +
-          ' /> Lock' +
+          ' /> ' +
+          (c.locked ? 'Locked' : 'Lock') +
           '</label>' +
           '</div>' +
           '</article>'
@@ -335,6 +341,33 @@
         criteria[idx].locked = lock.checked;
         ta.disabled = lock.checked;
         savePersisted();
+        const label = row.querySelector('.lock');
+        const fieldLabel = row.querySelector('.kill-field-label');
+        if (label) {
+          label.classList.toggle('is-locked', lock.checked);
+          // refresh visible word next to checkbox
+          const textNode = Array.from(label.childNodes).find(
+            (n) => n.nodeType === 3 && n.textContent.trim()
+          );
+          if (textNode) textNode.textContent = lock.checked ? ' Locked' : ' Lock';
+          else label.appendChild(document.createTextNode(lock.checked ? ' Locked' : ' Lock'));
+        }
+        if (fieldLabel) {
+          fieldLabel.textContent = lock.checked
+            ? 'Locked kill rule'
+            : 'Kill rule — edit if you want, then Lock';
+        }
+        const meta = $('metaLine');
+        if (meta) {
+          const n = criteria.filter((x) => x.locked).length;
+          meta.textContent =
+            (freeze?.symbol || $('symbol').value) +
+            ' · ' +
+            n +
+            '/' +
+            criteria.length +
+            ' rules locked — tap Refresh lights to re-check the colours';
+        }
       });
     });
   }

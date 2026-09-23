@@ -63,9 +63,13 @@
         </div>
 
         <p class="lattice-meta" id="metaLine">No freeze loaded yet — run the Desk first, then Load last freeze.</p>
+        <p class="hint kill-how" id="killHow">
+          Each box is a kill rule drafted from your Desk freeze — edit the wording if you want, then Lock to freeze that rule.
+          Lock does not place an order; tap <strong>Refresh lights</strong> afterward to re-check green / amber / red against the freeze.
+        </p>
         <div class="dq-badge" id="dqBadge" hidden title="Data quality from last desk freeze"></div>
         <div class="kill-list" id="killList"></div>
-        <p class="feature-footer-note">
+        <p class="feature-footer-note" id="killFooter">
           Green = clear · Amber = watch · Red = firing. Edits and locks save in this browser. Human decides — no orders.
         </p>
       </section>
