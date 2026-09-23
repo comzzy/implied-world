@@ -30,7 +30,26 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3847;
 
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+const publicDir = path.join(__dirname, '..', 'public');
+function sendPage(file) {
+  return (_req, res) => res.sendFile(path.join(publicDir, file));
+}
+
+// Clean page paths (no .html in the address bar)
+app.get('/lattice', sendPage('lattice.html'));
+app.get('/killboard', sendPage('kill.html'));
+app.get('/atlas', sendPage('atlas.html'));
+app.get('/docs', sendPage('docs.html'));
+
+// Old .html URLs and short aliases → clean paths
+app.get(['/lattice.html', '/lattice/'], (_req, res) => res.redirect(301, '/lattice'));
+app.get(['/kill.html', '/kill', '/kill/'], (_req, res) => res.redirect(301, '/killboard'));
+app.get(['/killboard/'], (_req, res) => res.redirect(301, '/killboard'));
+app.get(['/atlas.html', '/atlas/'], (_req, res) => res.redirect(301, '/atlas'));
+app.get(['/docs.html', '/docs/'], (_req, res) => res.redirect(301, '/docs'));
+
+app.use(express.static(publicDir));
 
 app.get('/api/health', async (_req, res) => {
   const [us, signal] = await Promise.all([

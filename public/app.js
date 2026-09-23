@@ -2,7 +2,7 @@
 (function () {
   const hash = window.location.hash || '';
   if (hash === '#docs' || hash.startsWith('#docs-')) {
-    window.location.replace('/docs.html' + (hash === '#docs' ? '' : hash));
+    window.location.replace('/docs' + (hash === '#docs' ? '' : hash));
     return;
   }
 
