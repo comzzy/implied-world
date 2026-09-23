@@ -174,34 +174,67 @@
       return;
     }
 
+    const btn = $('runAtlas');
+    const prev = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Running…';
+    }
+    if ($('metaLine')) $('metaLine').textContent = 'Running atlas…';
+
     const body = {
       sourceSymbol: want,
       shockType: $('shockType').value,
       freeze: deskFreeze,
     };
 
-    let r;
-    try {
-      r = await fetch('/api/atlas', {
+    async function postOnce() {
+      const r = await fetch('/api/atlas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        keepalive: true,
       });
+      const j = await r.json().catch(() => ({
+        ok: false,
+        error: r.statusText,
+        failureKind: 'api',
+      }));
+      if (!j.ok) {
+        const err = new Error(j.failureMessage || j.error || 'Atlas failed');
+        err._data = j;
+        err._res = r;
+        throw err;
+      }
+      return j;
+    }
+
+    try {
+      let j;
+      try {
+        j = await postOnce();
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        if (/Failed to fetch|NetworkError|offline|network/i.test(msg) && !err._data) {
+          if ($('metaLine')) $('metaLine').textContent = 'Retrying…';
+          j = await postOnce();
+        } else if (err._data) {
+          showFail(null, err._data, err._res);
+          return;
+        } else {
+          throw err;
+        }
+      }
+      render(j);
+      if (deskFreeze) renderDqBadge(deskFreeze);
     } catch (err) {
       showFail(err);
-      return;
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = prev || 'Run atlas';
+      }
     }
-    const j = await r.json().catch(() => ({
-      ok: false,
-      error: r.statusText,
-      failureKind: 'api',
-    }));
-    if (!j.ok) {
-      showFail(null, j, r);
-      return;
-    }
-    render(j);
-    if (deskFreeze) renderDqBadge(deskFreeze);
   }
 
   function render(data) {

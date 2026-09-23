@@ -229,33 +229,64 @@ app.post('/api/atlas', async (req, res) => {
       });
     }
 
-    // Live-freeze peers; mark source_failed on error — never invent numbers.
-    await Promise.all(
-      ['NVDA', 'TSLA', 'AAPL'].map(async (sym) => {
-        if (freezes[sym]) return;
-        try {
-          freezes[sym] = await freezeInputs(sym, { style: 'weekend_swing' });
-          const cashOk = freezes[sym]?.cashClose?.value != null;
-          const rtOk = freezes[sym]?.rtoken?.value != null;
-          const premOk = freezes[sym]?.premium?.value != null;
-          if (!premOk && (!cashOk || !rtOk)) {
+    // Prefer peer premiums already on the desk freeze (same live run).
+    // Only live-fetch a peer when that premium is missing — never invent numbers.
+    const focusFreeze = freezes[sourceSymbol];
+    const peersToLive = [];
+    for (const sym of ['NVDA', 'TSLA', 'AAPL']) {
+      if (freezes[sym]) continue;
+      const pp = focusFreeze?.peerPremiums?.[sym];
+      const prem = pp != null ? Number(pp.value) : NaN;
+      if (Number.isFinite(prem)) {
+        freezes[sym] = {
+          symbol: sym,
+          displayName: sym,
+          premium: {
+            value: prem,
+            tag: pp.tag || 'observed',
+            source: 'desk-peer',
+            tool: pp.rtoken_tool,
+          },
+          btc24hReturn: focusFreeze.btc24hReturn,
+          eventClass: focusFreeze.eventClass,
+          eventImportance: focusFreeze.eventImportance,
+          thinWrapper: focusFreeze.thinWrapper,
+          hoursToCashOpen: focusFreeze.hoursToCashOpen,
+          asOf: focusFreeze.asOf,
+          _fromDeskPeers: true,
+        };
+      } else {
+        peersToLive.push(sym);
+      }
+    }
+
+    if (peersToLive.length) {
+      await Promise.all(
+        peersToLive.map(async (sym) => {
+          try {
+            freezes[sym] = await freezeInputs(sym, { style: 'weekend_swing' });
+            const cashOk = freezes[sym]?.cashClose?.value != null;
+            const rtOk = freezes[sym]?.rtoken?.value != null;
+            const premOk = freezes[sym]?.premium?.value != null;
+            if (!premOk && (!cashOk || !rtOk)) {
+              freezes[sym] = {
+                symbol: sym,
+                _failed: true,
+                source_failed: true,
+                _failNote: 'Live peer freeze missing cash or rToken — no sample substituted.',
+              };
+            }
+          } catch (err) {
             freezes[sym] = {
               symbol: sym,
               _failed: true,
               source_failed: true,
-              _failNote: 'Live peer freeze missing cash or rToken — no sample substituted.',
+              _failNote: String(err.message || 'Live peer freeze failed'),
             };
           }
-        } catch (err) {
-          freezes[sym] = {
-            symbol: sym,
-            _failed: true,
-            source_failed: true,
-            _failNote: String(err.message || 'Live peer freeze failed'),
-          };
-        }
-      })
-    );
+        })
+      );
+    }
 
     const out = runAtlas({
       freezes,
