@@ -39,16 +39,19 @@
           </svg>
           <span class="brand-text">Implied <em>World</em></span>
         </a>
-        <nav class="nav" aria-label="Primary">
+        <nav class="nav" id="site-nav" aria-label="Primary">
           <a href="#desk-anchor" class="active" data-nav="desk">Desk</a>
           <a href="/lattice.html" data-nav="lattice">Lattice</a>
           <a href="/kill.html" data-nav="kill">Kill board</a>
           <a href="/atlas.html" data-nav="atlas">Atlas</a>
-          <a href="#docs" data-nav="docs">Docs</a>
+          <a href="/docs.html" data-nav="docs">Docs</a>
         </nav>
         <div class="header-right">
           <a class="btn" href="#desk-anchor">Run desk</a>
         </div>
+        <button type="button" class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="site-nav">
+          <span class="nav-toggle-bars" aria-hidden="true"></span>
+        </button>
       </div>
     </header>
 
@@ -231,246 +234,6 @@
         </div>
       </section>
 
-      <section class="wrap docs" id="docs">
-        <div class="section-head">
-          <h2>Docs</h2>
-          <span>Desk notes</span>
-        </div>
-
-        <div class="docs-body">
-          <article class="docs-block" id="docs-what">
-            <h3>What it is</h3>
-            <p>
-              Implied World is an overnight rToken research desk for NVDA, TSLA, and AAPL.
-              It freezes tagged market inputs, draws an implied gap band into the next US cash open,
-              runs stress and twin checks, and can draft a short write-up from that frozen table.
-              It does not place orders. You decide.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-why">
-            <h3>Why Implied World</h3>
-            <p>
-              Tokenized equity wrappers trade when the US cash book is closed. Premium can look rich
-              or thin overnight without a clear map of how much room remains into Monday’s open,
-              once BTC residual and the calendar are in the picture. The desk exists so those pieces
-              sit in one place, labelled, with the math auditable — not as a trade ticket.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-problem">
-            <h3>The problem it solves</h3>
-            <p>
-              A weekend thesis often mixes live wrapper premium, a cash last print, a residual BTC move,
-              and a guess at event weight. Without tags, failed feeds look like calm quotes. Without a band,
-              “still has room” is a feeling. Without a counter-thesis and a first-to-break list, the desk
-              only tells one story. Implied World freezes the inputs you have, marks what is missing,
-              solves the band, and leaves the call with you.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-desk">
-            <h3>Desk</h3>
-            <p>
-              Pick a symbol, thesis, style (weekend_swing, event_window, or intraday_wrapper), and notional.
-              Run desk freezes cash last, wrapper / rToken premium, BTC residual, event weight, and hours
-              to cash open. Each line carries a data-quality tag.
-            </p>
-            <ul class="docs-list">
-              <li><strong>Band</strong> — implied gap mid = premium + k × event × residual BTC, with lo/hi from a fixed stress pad. Status is room left, no room, or open but unstable — never a side.</li>
-              <li><strong>Lamp</strong> — ALIGNED or CONTESTED from how this thesis sits against the counter-thesis and factor check.</li>
-              <li><strong>Briefing</strong> — a write-up from the frozen table only. If the writer is off or fails, numbers still load; the briefing may be empty.</li>
-              <li><strong>Channel split</strong> — name / BTC residual / wrapper shares of the move, labels only.</li>
-              <li><strong>Decay</strong> — how the pad shrinks as hours to open fall (Friday-night vs now).</li>
-              <li><strong>Stress · first to break</strong> — preset shocks (event→0, wrapper +1.5%, BTC residual −3%) and which dies first.</li>
-              <li><strong>Sliders</strong> — local recompute of event / wrapper / BTC from the frozen JSON; no new write-up call.</li>
-              <li><strong>Factor · size · receipt</strong> — same-hour premiums across the three names, whether size eats the band, and a copyable receipt.</li>
-            </ul>
-          </article>
-
-          <article class="docs-block" id="docs-lattice">
-            <h3>Open Lattice</h3>
-            <p>
-              A Monday cash-open rehearsal grid. Rows are cash open (−3%…+3%); columns are BTC residual
-              (−3% / 0 / +3%). Optional wrapper bump +1% on every cell. Load the last desk freeze or a sample,
-              then run the lattice to see which cells still have room. Human decides — no orders.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-kill">
-            <h3>Kill Board</h3>
-            <p>
-              Editable falsification criteria with traffic lights (green clear · amber watch · red firing).
-              Load a freeze, refresh lights against current criteria, edit or lock rows in this browser.
-              Criteria are yours to change; the board does not place orders.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-atlas">
-            <h3>Contagion Atlas</h3>
-            <p>
-              Shock one name and see whether stress stays local or hits NVDA, TSLA, and AAPL together.
-              Wrapper shocks apply to the source name only; BTC residual and event shocks are shared.
-              Heat shows room / no room / unstable per name. Use last desk freeze or sample freezes.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-dq">
-            <h3>Data quality</h3>
-            <p>Every numeric field is tagged. Failed feeds are never dressed up as live.</p>
-            <ul class="docs-list">
-              <li><strong>Observed</strong> — printed from a live feed response.</li>
-              <li><strong>Computed</strong> — derived from calendar or formula (e.g. hours to cash open).</li>
-              <li><strong>Assumed</strong> — placeholder, heuristic, or intentional skip; desk still runs.</li>
-              <li><strong>Failed</strong> (<code>source_failed</code>) — feed unreachable or empty.</li>
-            </ul>
-            <p>
-              Hours to cash open are always populated (computed, or assumed only if the ET lookup falls back).
-              Event class stays “none” for math when the event feed fails; the tag still says failed.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-howto">
-            <h3>How to use</h3>
-            <ol class="docs-steps">
-              <li>Open the desk. Leave or edit the thesis, style, and notional. Run desk.</li>
-              <li>Read the data-quality strip first. Note observed vs assumed vs failed before trusting the band.</li>
-              <li>Check status, lamp, band, and this thesis vs counter-thesis. Read the briefing only as a write-up from those numbers.</li>
-              <li>Scan decay, stress first-to-break, factor, and whether size eats room. Copy the receipt if you want a snapshot.</li>
-              <li>Move sliders for a local what-if; they do not re-freeze feeds or re-draft the write-up.</li>
-              <li>Open Lattice to rehearse Monday opens; Kill Board to lock falsification lights; Atlas to test whether one shock spills across names.</li>
-            </ol>
-            <p class="docs-aside">
-              Freeze · solve · brief in short: lock tagged inputs, draw the band and checks, then a write-up from the frozen table. Direction words are stripped. You make the call.
-            </p>
-          </article>
-
-          <article class="docs-block" id="docs-limits">
-            <h3>Limits</h3>
-            <ul class="docs-list">
-              <li>You decide. The desk never prints buy, sell, long, or short.</li>
-              <li>No orders. Research output only.</li>
-              <li>Failed feeds are labelled. They are never dressed up as live.</li>
-              <li>The briefing follows the solved numbers. It does not invent prices.</li>
-              <li>Published constants stay fixed: k = 0.4 · stress pad default = 0.8%.</li>
-              <li>Universe is NVDA, TSLA, AAPL rToken / wrapper focus.</li>
-            </ul>
-          </article>
-
-
-          <article class="docs-block" id="docs-roadmap">
-            <h3>Roadmap</h3>
-            <p class="docs-aside">Modest product path. None of this is promised on a date.</p>
-            <div class="docs-roadmap">
-              <div class="rm-col">
-                <h4>Now</h4>
-                <ul class="docs-list">
-                  <li>Desk freeze · band · lamp · briefing from the frozen table</li>
-                  <li>Open Lattice, Kill Board, Contagion Atlas on the three-name set</li>
-                  <li>Data-quality tags on every input; failed feeds labelled</li>
-                  <li>Local sliders and sample freezes for rehearsal without a live run</li>
-                </ul>
-              </div>
-              <div class="rm-col">
-                <h4>Next</h4>
-                <ul class="docs-list">
-                  <li>Stronger event calendar when calendar feeds stay stable</li>
-                  <li>Saved thesis history in the browser (reload last runs without retyping)</li>
-                  <li>Richer Atlas scenarios (multi-shock paths, clearer spill labels)</li>
-                  <li>Public deploy of the static desk + API behind a fixed host</li>
-                </ul>
-              </div>
-              <div class="rm-col">
-                <h4>Later</h4>
-                <ul class="docs-list">
-                  <li>More names beyond NVDA, TSLA, AAPL when wrapper coverage is honest</li>
-                  <li>Deeper order-book thinness on the wrapper leg (observed depth, not heuristic)</li>
-                  <li>Exportable desk packs (freeze + receipt + lights) for offline review</li>
-                  <li>Optional shared kill-criteria templates — still edited by the human</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-
-          <article class="docs-block" id="docs-faq">
-            <h3>FAQ</h3>
-            <div class="docs-faq">
-              <details>
-                <summary>Does it trade for me?</summary>
-                <p>No. The desk never places orders. Research output only; you decide.</p>
-              </details>
-              <details>
-                <summary>Why observed vs assumed?</summary>
-                <p>
-                  Observed means a live feed returned the figure. Assumed means a placeholder, heuristic,
-                  or intentional skip so the desk can still run. Treat assumed lines as labelled uncertainty,
-                  not as quiet live quotes.
-                </p>
-              </details>
-              <details>
-                <summary>What is rToken / wrapper here?</summary>
-                <p>
-                  The crypto-side leg that tracks the US name when cash is closed — the wrapper last used
-                  against cash last to form premium. Cash and wrapper are separate legs; if the wrapper feed
-                  fails, the desk may fall back to an assumed premium and will say so.
-                </p>
-              </details>
-              <details>
-                <summary>What if a feed fails?</summary>
-                <p>
-                  That field is tagged failed (or assumed if a labelled fallback is used). The numeric desk
-                  still returns. Nothing is painted as observed when the source did not answer.
-                </p>
-              </details>
-              <details>
-                <summary>Sample vs live freeze?</summary>
-                <p>
-                  Lattice, Kill Board, and Atlas can load the last desk freeze from this browser or a built-in
-                  sample freeze. Sample is for rehearsal when you have not run the desk yet; it is labelled sample.
-                </p>
-              </details>
-              <details>
-                <summary>Why no buy / sell?</summary>
-                <p>
-                  The product is a decision aid, not an order ticket. Status and lamp describe room and alignment;
-                  they do not encode a side. Direction words are stripped from text outputs.
-                </p>
-              </details>
-              <details>
-                <summary>What is “hours to cash open”?</summary>
-                <p>
-                  Computed time until the next US regular cash open (ET calendar). It drives decay of the stress pad
-                  and the clock on the desk. If the ET path fails, a fallback may be assumed and tagged.
-                </p>
-              </details>
-              <details>
-                <summary>What does event source_failed mean?</summary>
-                <p>
-                  The event / calendar feed timed out or errored. Math may still use event class none;
-                  the tag tells you the quiet calendar was not verified. Assumed on events means no dated match,
-                  not “none exists.”
-                </p>
-              </details>
-              <details>
-                <summary>Can I edit kill criteria?</summary>
-                <p>
-                  Yes. On the Kill Board you can edit and lock criteria in this browser, then refresh lights
-                  against a loaded freeze. Edits stay local to the browser.
-                </p>
-              </details>
-              <details>
-                <summary>Where does the briefing come from?</summary>
-                <p>
-                  A write-up from the frozen table (symbol, legs, premium, residual, event, hours, band,
-                  first-to-break, factor, lamp). It does not invent prices. If the writer is unavailable,
-                  the briefing is empty and the numbers remain.
-                </p>
-              </details>
-            </div>
-          </article>
-        </div>
-      </section>
-
     </main>
 
     <footer class="footer">
@@ -482,6 +245,7 @@
     </footer>
   </div>
 
+  <script src="/nav.js" defer></script>
   <script src="/app.js"></script>
 </body>
 </html>

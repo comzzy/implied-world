@@ -10,7 +10,7 @@ You freeze the weekend picture — cash last, wrapper last, BTC residual, hours 
 - **Open Lattice** — Monday cash-open × BTC residual grid (room left / no room / unstable).
 - **Kill Board** — editable kill criteria with traffic lights against the last freeze.
 - **Contagion Atlas** — shock one name and see whether stress stays local or hits all three.
-- **Docs** — product guide, how to use, limits, roadmap, FAQ (`/#docs`).
+- **Docs** — product guide, how to use, limits, roadmap, FAQ (`/docs.html`).
 
 Every important number is tagged `observed`, `assumed`, or `source_failed`. Failed feeds stay labelled; they are never dressed up as live.
 

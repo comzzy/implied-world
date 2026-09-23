@@ -1,5 +1,11 @@
 /* Implied World desk UI — client recompute mirrors src/stress.js (local only). */
 (function () {
+  const hash = window.location.hash || '';
+  if (hash === '#docs' || hash.startsWith('#docs-')) {
+    window.location.replace('/docs.html' + (hash === '#docs' ? '' : hash));
+    return;
+  }
+
   const K = 0.4;
   const STRESS_PAD_DEFAULT = 0.008;
   const EVENT_IMPORTANCE = { none: 0.1, geopolitics: 0.45, cpi_fomc: 0.7, earnings: 0.85 };

@@ -201,6 +201,114 @@ a:hover { color: var(--accent-2); }
   .header-inner { flex-wrap: nowrap; }
 }
 
+/* ——— Mobile nav toggle ——— */
+.nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  flex: none;
+  margin-left: 4px;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.nav-toggle:hover { background: var(--card); }
+.nav-toggle-bars {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  position: relative;
+}
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+}
+.nav-toggle-bars::before { top: -6px; }
+.nav-toggle-bars::after { top: 6px; }
+.site-header.nav-open .nav-toggle-bars {
+  background: transparent;
+}
+.site-header.nav-open .nav-toggle-bars::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+.site-header.nav-open .nav-toggle-bars::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 859px) {
+  .header-inner {
+    position: relative;
+    flex-wrap: nowrap;
+  }
+  .nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    flex: none;
+    gap: 0;
+    width: 100%;
+    margin: 0;
+    padding: 6px 0;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    z-index: 40;
+    box-shadow: 0 10px 28px rgba(17, 24, 20, 0.08);
+  }
+  .site-header.nav-open .nav {
+    display: flex;
+  }
+  .nav a {
+    display: block;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    white-space: normal;
+  }
+  .nav a:last-child { border-bottom: none; }
+  .nav a.active {
+    border-bottom-color: var(--line);
+  }
+  body.nav-open {
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 860px) {
+  .nav-toggle { display: none; }
+  .site-header.nav-open .nav,
+  .nav {
+    display: flex;
+    position: static;
+    flex-direction: row;
+    width: auto;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+  }
+  body.nav-open {
+    overflow: visible;
+  }
+}
+
+
 /* ——— Intro + desk ——— */
 .desk-section {
   padding-top: 28px;
@@ -363,6 +471,10 @@ a:hover { color: var(--accent-2); }
 .docs {
   padding-top: 8px;
   padding-bottom: 48px;
+}
+.page-hero.docs .docs-body {
+  margin-top: 12px;
+  margin-bottom: 40px;
 }
 .docs-body {
   background: var(--card);
