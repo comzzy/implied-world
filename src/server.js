@@ -436,9 +436,13 @@ function numTag(field) {
   };
 }
 
-app.listen(PORT, () => {
-  // Never log secrets
-  console.log(`Implied World desk on http://127.0.0.1:${PORT}`);
-  console.log(`Qwen key present: ${hasKey()}`);
-  console.log('Human decides. This desk does not trade.');
-});
+module.exports = app;
+
+if (require.main === module && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    // Never log secrets
+    console.log(`Implied World desk on http://127.0.0.1:${PORT}`);
+    console.log(`Qwen key present: ${hasKey()}`);
+    console.log('Human decides. This desk does not trade.');
+  });
+}
