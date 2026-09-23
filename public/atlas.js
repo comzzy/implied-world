@@ -144,9 +144,7 @@
       deskFreeze = parsed.freeze;
       if (parsed.symbol) $('sourceSymbol').value = parsed.symbol;
       $('metaLine').textContent =
-        'Desk freeze for ' +
-        (parsed.symbol || deskFreeze.symbol) +
-        ' — peers will be live-frozen. Run atlas.';
+        'Desk freeze · ' + (parsed.symbol || deskFreeze.symbol);
       renderDqBadge(deskFreeze);
       return true;
     } catch (err) {

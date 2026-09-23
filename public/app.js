@@ -382,8 +382,8 @@
       const sym = data.symbol || data.freeze?.symbol || '—';
       hint.hidden = false;
       hint.textContent = saved
-        ? 'Last freeze saved for Lattice / Kill board / Atlas · ' + sym
-        : 'Could not save freeze on this phone (storage blocked). Stay on Desk and open tools from the same browser.';
+        ? 'Freeze saved · ' + sym
+        : 'Freeze not saved in this browser.';
     }
 
     setLamp(data.lamp);

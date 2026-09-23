@@ -302,7 +302,7 @@
           esc(c.label) +
           '</h3>' +
           '<p class="kill-field-label">' +
-          (c.locked ? 'Locked kill rule' : 'Kill rule — edit if you want, then Lock') +
+          (c.locked ? 'Locked' : 'Criterion') +
           '</p>' +
           '<textarea data-field="plain" rows="4" placeholder="e.g. If wrapper premium sits at or above the band high, the overnight idea has no room left." ' +
           (c.locked ? 'disabled' : '') +
@@ -353,9 +353,7 @@
           else label.appendChild(document.createTextNode(lock.checked ? ' Locked' : ' Lock'));
         }
         if (fieldLabel) {
-          fieldLabel.textContent = lock.checked
-            ? 'Locked kill rule'
-            : 'Kill rule — edit if you want, then Lock';
+          fieldLabel.textContent = lock.checked ? 'Locked' : 'Criterion';
         }
         const meta = $('metaLine');
         if (meta) {
@@ -366,7 +364,7 @@
             n +
             '/' +
             criteria.length +
-            ' rules locked — tap Refresh lights to re-check the colours';
+            ' locked';
         }
       });
     });
