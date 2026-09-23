@@ -355,10 +355,16 @@ app.post('/api/briefing', async (req, res) => {
     const twin = body.twin || null;
     const channels = body.channels || null;
     const stress = body.stress || null;
-    const timeoutMs =
-      Number(body.timeoutMs) ||
-      Number(process.env.QWEN_TIMEOUT_MS) ||
-      (process.env.VERCEL ? 28000 : 50000);
+    // Standalone note: use a longer budget than the numbers-first desk path.
+    const envMs = Number(process.env.QWEN_TIMEOUT_MS) || 0;
+    const timeoutMs = Math.min(
+      55000,
+      Math.max(
+        Number(body.timeoutMs) || 0,
+        envMs > 0 ? Math.max(envMs, 40000) : 40000,
+        process.env.VERCEL ? 40000 : 50000
+      )
+    );
 
     const briefing = sanitizeObject(
       await askQwenBriefing({
@@ -377,9 +383,13 @@ app.post('/api/briefing', async (req, res) => {
     );
     res.json({ ok: true, briefing, style, thesis });
   } catch (err) {
+    const msg = String(err.message || err);
     res.status(502).json({
-      ...failurePayload(err, { kind: 'writeup', status: 502 }),
       ok: false,
+      error: msg,
+      failureKind: 'writeup',
+      failureMessage: 'Research note failed: ' + msg.slice(0, 180),
+      banner: 'Human decides. This desk does not trade.',
     });
   }
 });
