@@ -1659,3 +1659,10 @@ table.dense tr.die td { color: var(--bad); }
   background: rgba(0, 0, 0, 0.03);
   border-style: dashed;
 }
+
+
+.atlas-how {
+  margin: 0 0 12px;
+  max-width: 52rem;
+  line-height: 1.45;
+}
