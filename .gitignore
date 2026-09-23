@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+.env.production
+!.env.example
+*.log
+.DS_Store
+dist/
+coverage/
+.idea/
+.vscode/
+*.pem
+credentials.json

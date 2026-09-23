@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kill Board · Implied World</title>
+  <meta name="description" content="Editable falsification criteria with traffic lights for overnight rToken theses." />
+  <meta name="theme-color" content="#f4f1ea" />
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/" aria-label="Implied World">
+          <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="4" y="4" width="56" height="56" fill="none" stroke="currentColor" stroke-width="4"/>
+            <rect x="14" y="14" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="22" y="28" width="20" height="8" fill="#2563eb"/>
+            <line x1="22" y1="22" x2="42" y2="22" stroke="currentColor" stroke-width="2"/>
+            <line x1="22" y1="42" x2="42" y2="42" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span class="brand-text">Implied <em>World</em></span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="/#desk-anchor" data-nav="desk">Desk</a>
+          <a href="/lattice.html" data-nav="lattice">Lattice</a>
+          <a href="/kill.html" class="active" data-nav="kill">Kill board</a>
+          <a href="/atlas.html" data-nav="atlas">Atlas</a>
+          <a href="/#docs" data-nav="docs">Docs</a>
+        </nav>
+        <div class="header-right">
+          <a class="btn" href="/#desk-anchor">Run desk</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="wrap page-hero">
+        <p class="kicker">Kill criteria</p>
+        <h1>Kill Board</h1>
+
+        <div class="feature-controls">
+          <label>
+            Symbol
+            <select id="symbol">
+              <option value="NVDA">NVDA — NVIDIA</option>
+              <option value="TSLA">TSLA — Tesla</option>
+              <option value="AAPL">AAPL — Apple</option>
+            </select>
+          </label>
+          <div class="btn-row">
+            <button type="button" class="ghost" id="loadLast">Load last freeze from Desk</button>
+            <button type="button" class="run" id="useSample">Use sample freeze</button>
+            <button type="button" class="run" id="refresh">Refresh lights</button>
+          </div>
+        </div>
+
+        <p class="lattice-meta" id="metaLine">Drafting kill criteria…</p>
+        <div class="dq-badge" id="dqBadge" hidden title="Data quality from last desk freeze"></div>
+        <div class="kill-list" id="killList"></div>
+        <p class="feature-footer-note">
+          Green = clear · Amber = watch · Red = firing. Edits and locks save in this browser. Human decides — no orders.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <span>Implied World</span>
+        <span>Kill Board</span>
+        <span>Human decides</span>
+      </div>
+    </footer>
+  </div>
+  <script src="/kill.js"></script>
+</body>
+</html>

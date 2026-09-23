@@ -1,0 +1,18 @@
+{
+  "name": "implied-world",
+  "version": "1.0.0",
+  "description": "Implied World — Bitget S2 research desk. Human decides; AI researches. No trading.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test:sanitize": "node -e \"const {sanitizeText}=require('./shared/sanitize'); const o=sanitizeText('BUY NVDA and go long'); if(/BUY|SELL|LONG|SHORT/i.test(o)){console.error('FAIL',o);process.exit(1)} console.log('PASS',o);\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "private": true
+}

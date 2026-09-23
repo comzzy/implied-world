@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Implied World</title>
+  <meta name="description" content="Implied World checks whether an overnight rToken thesis still has room into Monday’s cash open." />
+  <meta name="theme-color" content="#f4f1ea" />
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="splash-active">
+  <div id="splash" class="splash" role="dialog" aria-label="Implied World" aria-live="polite">
+    <div class="splash-inner">
+      <svg class="splash-logo" viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="4" y="4" width="56" height="56" fill="none" stroke="#111814" stroke-width="2.5"/>
+        <rect x="14" y="14" width="36" height="36" fill="none" stroke="#111814" stroke-width="1.75"/>
+        <rect class="logo-gap" x="22" y="28" width="20" height="8" fill="#2563eb"/>
+        <line x1="22" y1="22" x2="42" y2="22" stroke="#111814" stroke-width="1.5"/>
+        <line x1="22" y1="42" x2="42" y2="42" stroke="#111814" stroke-width="1.5"/>
+      </svg>
+      <h1 class="splash-title">Implied <em>World</em></h1>
+    </div>
+  </div>
+
+  <div id="app" class="app" aria-hidden="true">
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/" aria-label="Implied World">
+          <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="4" y="4" width="56" height="56" fill="none" stroke="currentColor" stroke-width="4"/>
+            <rect x="14" y="14" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="22" y="28" width="20" height="8" fill="#2563eb"/>
+            <line x1="22" y1="22" x2="42" y2="22" stroke="currentColor" stroke-width="2"/>
+            <line x1="22" y1="42" x2="42" y2="42" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span class="brand-text">Implied <em>World</em></span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#desk-anchor" class="active" data-nav="desk">Desk</a>
+          <a href="/lattice.html" data-nav="lattice">Lattice</a>
+          <a href="/kill.html" data-nav="kill">Kill board</a>
+          <a href="/atlas.html" data-nav="atlas">Atlas</a>
+          <a href="#docs" data-nav="docs">Docs</a>
+        </nav>
+        <div class="header-right">
+          <a class="btn" href="#desk-anchor">Run desk</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="wrap desk-section" id="desk-anchor">
+        <div class="section-head">
+          <h2>Desk</h2>
+          <span>Run a thesis</span>
+        </div>
+
+        <p class="desk-intro">
+          Freeze overnight inputs, draw the implied room into Monday’s cash open, and see what breaks first if the wrapper, BTC residual, or calendar event moves.
+        </p>
+
+        <div class="explore-strip" aria-label="Explore related tools">
+          <a class="explore-card" href="/lattice.html">
+            <p class="ec-title">Open Lattice</p>
+            <p class="ec-plain">Rehearse Monday’s cash open up or down — see which cells still have room.</p>
+          </a>
+          <a class="explore-card" href="/kill.html">
+            <p class="ec-title">Kill board</p>
+            <p class="ec-plain">Lock kill criteria and watch the lights into Monday.</p>
+          </a>
+          <a class="explore-card" href="/atlas.html">
+            <p class="ec-title">Contagion Atlas</p>
+            <p class="ec-plain">Shock one name and check if stress stays local or hits all three.</p>
+          </a>
+        </div>
+
+        <div class="topbar">
+          <div class="brand-inline">
+            <span class="sub">US rToken desk</span>
+          </div>
+          <div class="meta-row">
+            <div class="lamp" id="lamp" title="Lamp">
+              <span class="lamp-dot"></span>
+              <span id="lampLabel">—</span>
+            </div>
+            <div class="clock" id="clock">hours to cash open: —</div>
+          </div>
+        </div>
+
+        <div class="layout" id="desk-work">
+          <aside class="controls">
+            <label>
+              Symbol
+              <select id="symbol">
+                <option value="NVDA">NVDA — NVIDIA</option>
+                <option value="TSLA">TSLA — Tesla</option>
+                <option value="AAPL">AAPL — Apple</option>
+              </select>
+            </label>
+            <label>
+              Thesis
+              <textarea id="thesis" placeholder="Weekend thesis…">NVDA into Monday: does the rToken premium still leave room after BTC residual and a quiet calendar, or has the wrapper already spent the band?</textarea>
+            </label>
+            <label>
+              Style
+              <select id="style">
+                <option value="weekend_swing">weekend_swing</option>
+                <option value="event_window">event_window</option>
+                <option value="intraday_wrapper">intraday_wrapper</option>
+              </select>
+            </label>
+            <label>
+              Notional (USDT)
+              <input id="notional" type="number" min="100" step="100" value="5000" />
+            </label>
+            <button class="run" id="runBtn" type="button">Run desk</button>
+            <p class="hint">
+              Inputs are tagged. The briefing follows the solved table.
+              No orders are placed.
+            </p>
+            <div id="healthLine" class="hint"></div>
+          </aside>
+
+          <div class="main">
+            <div class="status-row">
+              <span class="chip dim" id="statusChip">STATUS —</span>
+              <span class="chip dim" id="factorChip">FACTOR —</span>
+              <span class="chip dim" id="sizeChip">SIZE —</span>
+              <button class="ghost" id="copyReceipt" type="button" disabled>Copy receipt</button>
+            </div>
+
+            <div id="emptyState" class="empty">Set a thesis and run the desk. Failed feeds show as failed or assumed — never as quiet live quotes.</div>
+
+            <div id="dataQuality" class="data-quality" hidden>
+              <div class="dq-head">
+                <strong>Data quality</strong>
+                <span class="dq-legend">
+                  <span class="dq-pill observed">Observed</span>
+                  <span class="dq-pill assumed">Assumed</span>
+                  <span class="dq-pill source_failed">Failed</span>
+                  <span class="dq-pill computed">Computed</span>
+                </span>
+              </div>
+              <div class="dq-list" id="dqList"></div>
+            </div>
+
+            <div id="desk" hidden>
+              <div class="cols">
+                <section class="panel" id="primaryPanel">
+                  <h2>This thesis</h2>
+                  <div class="kv" id="primaryKv"></div>
+                  <h3>Channel split</h3>
+                  <div class="stack" id="primaryStack"></div>
+                  <div class="legend" id="primaryLegend"></div>
+                  <h3>Briefing</h3>
+                  <div class="brief" id="briefing"></div>
+                </section>
+
+                <section class="panel" id="twinPanel">
+                  <h2>Counter-thesis</h2>
+                  <div class="kv" id="twinKv"></div>
+                  <h3>Channel split</h3>
+                  <div class="stack" id="twinStack"></div>
+                  <div class="legend" id="twinLegend"></div>
+                  <h3>Framing</h3>
+                  <div class="brief" id="twinFraming"></div>
+                </section>
+              </div>
+
+              <div class="cols">
+                <section class="panel">
+                  <h2>Decay</h2>
+                  <canvas id="decayChart" width="640" height="140"></canvas>
+                  <div class="kv" id="decayKv" style="margin-top:8px"></div>
+                </section>
+
+                <section class="panel">
+                  <h2>Stress · first to break</h2>
+                  <div class="table-scroll">
+                    <table class="dense" id="stressTable">
+                      <thead>
+                        <tr><th>Shock</th><th>Status</th><th class="num">Mid</th><th class="num">Lo</th><th class="num">Hi</th></tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+                  <div class="kv" id="firstDie" style="margin-top:8px"></div>
+                </section>
+              </div>
+
+              <div class="cols">
+                <section class="panel">
+                  <h2>Sliders · local recompute</h2>
+                  <div class="sliders">
+                    <div class="slider-row">
+                      <span>event 0–1</span>
+                      <input type="range" id="sEvent" min="0" max="1" step="0.05" value="0.1" />
+                      <span class="val" id="sEventVal">0.10</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>wrapper 0–3%</span>
+                      <input type="range" id="sWrap" min="0" max="3" step="0.1" value="0" />
+                      <span class="val" id="sWrapVal">0.0%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>BTC −5..+5%</span>
+                      <input type="range" id="sBtc" min="-5" max="5" step="0.1" value="0" />
+                      <span class="val" id="sBtcVal">0.0%</span>
+                    </div>
+                  </div>
+                  <div class="kv" id="sliderKv" style="margin-top:10px"></div>
+                </section>
+
+                <section class="panel">
+                  <h2>Factor · size · receipt · sources</h2>
+                  <div class="kv" id="factorKv"></div>
+                  <h3>Size eats room</h3>
+                  <div class="kv" id="sizeKv"></div>
+                  <h3>Receipt</h3>
+                  <pre class="receipt-box" id="receiptBox"></pre>
+                  <h3>Sources</h3>
+                  <ul class="sources" id="sourcesList"></ul>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap docs" id="docs">
+        <div class="section-head">
+          <h2>Docs</h2>
+          <span>Desk notes</span>
+        </div>
+
+        <div class="docs-body">
+          <article class="docs-block" id="docs-what">
+            <h3>What it is</h3>
+            <p>
+              Implied World is an overnight rToken research desk for NVDA, TSLA, and AAPL.
+              It freezes tagged market inputs, draws an implied gap band into the next US cash open,
+              runs stress and twin checks, and can draft a short write-up from that frozen table.
+              It does not place orders. You decide.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-why">
+            <h3>Why Implied World</h3>
+            <p>
+              Tokenized equity wrappers trade when the US cash book is closed. Premium can look rich
+              or thin overnight without a clear map of how much room remains into Monday’s open,
+              once BTC residual and the calendar are in the picture. The desk exists so those pieces
+              sit in one place, labelled, with the math auditable — not as a trade ticket.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-problem">
+            <h3>The problem it solves</h3>
+            <p>
+              A weekend thesis often mixes live wrapper premium, a cash last print, a residual BTC move,
+              and a guess at event weight. Without tags, failed feeds look like calm quotes. Without a band,
+              “still has room” is a feeling. Without a counter-thesis and a first-to-break list, the desk
+              only tells one story. Implied World freezes the inputs you have, marks what is missing,
+              solves the band, and leaves the call with you.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-desk">
+            <h3>Desk</h3>
+            <p>
+              Pick a symbol, thesis, style (weekend_swing, event_window, or intraday_wrapper), and notional.
+              Run desk freezes cash last, wrapper / rToken premium, BTC residual, event weight, and hours
+              to cash open. Each line carries a data-quality tag.
+            </p>
+            <ul class="docs-list">
+              <li><strong>Band</strong> — implied gap mid = premium + k × event × residual BTC, with lo/hi from a fixed stress pad. Status is room left, no room, or open but unstable — never a side.</li>
+              <li><strong>Lamp</strong> — ALIGNED or CONTESTED from how this thesis sits against the counter-thesis and factor check.</li>
+              <li><strong>Briefing</strong> — a write-up from the frozen table only. If the writer is off or fails, numbers still load; the briefing may be empty.</li>
+              <li><strong>Channel split</strong> — name / BTC residual / wrapper shares of the move, labels only.</li>
+              <li><strong>Decay</strong> — how the pad shrinks as hours to open fall (Friday-night vs now).</li>
+              <li><strong>Stress · first to break</strong> — preset shocks (event→0, wrapper +1.5%, BTC residual −3%) and which dies first.</li>
+              <li><strong>Sliders</strong> — local recompute of event / wrapper / BTC from the frozen JSON; no new write-up call.</li>
+              <li><strong>Factor · size · receipt</strong> — same-hour premiums across the three names, whether size eats the band, and a copyable receipt.</li>
+            </ul>
+          </article>
+
+          <article class="docs-block" id="docs-lattice">
+            <h3>Open Lattice</h3>
+            <p>
+              A Monday cash-open rehearsal grid. Rows are cash open (−3%…+3%); columns are BTC residual
+              (−3% / 0 / +3%). Optional wrapper bump +1% on every cell. Load the last desk freeze or a sample,
+              then run the lattice to see which cells still have room. Human decides — no orders.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-kill">
+            <h3>Kill Board</h3>
+            <p>
+              Editable falsification criteria with traffic lights (green clear · amber watch · red firing).
+              Load a freeze, refresh lights against current criteria, edit or lock rows in this browser.
+              Criteria are yours to change; the board does not place orders.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-atlas">
+            <h3>Contagion Atlas</h3>
+            <p>
+              Shock one name and see whether stress stays local or hits NVDA, TSLA, and AAPL together.
+              Wrapper shocks apply to the source name only; BTC residual and event shocks are shared.
+              Heat shows room / no room / unstable per name. Use last desk freeze or sample freezes.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-dq">
+            <h3>Data quality</h3>
+            <p>Every numeric field is tagged. Failed feeds are never dressed up as live.</p>
+            <ul class="docs-list">
+              <li><strong>Observed</strong> — printed from a live feed response.</li>
+              <li><strong>Computed</strong> — derived from calendar or formula (e.g. hours to cash open).</li>
+              <li><strong>Assumed</strong> — placeholder, heuristic, or intentional skip; desk still runs.</li>
+              <li><strong>Failed</strong> (<code>source_failed</code>) — feed unreachable or empty.</li>
+            </ul>
+            <p>
+              Hours to cash open are always populated (computed, or assumed only if the ET lookup falls back).
+              Event class stays “none” for math when the event feed fails; the tag still says failed.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-howto">
+            <h3>How to use</h3>
+            <ol class="docs-steps">
+              <li>Open the desk. Leave or edit the thesis, style, and notional. Run desk.</li>
+              <li>Read the data-quality strip first. Note observed vs assumed vs failed before trusting the band.</li>
+              <li>Check status, lamp, band, and this thesis vs counter-thesis. Read the briefing only as a write-up from those numbers.</li>
+              <li>Scan decay, stress first-to-break, factor, and whether size eats room. Copy the receipt if you want a snapshot.</li>
+              <li>Move sliders for a local what-if; they do not re-freeze feeds or re-draft the write-up.</li>
+              <li>Open Lattice to rehearse Monday opens; Kill Board to lock falsification lights; Atlas to test whether one shock spills across names.</li>
+            </ol>
+            <p class="docs-aside">
+              Freeze · solve · brief in short: lock tagged inputs, draw the band and checks, then a write-up from the frozen table. Direction words are stripped. You make the call.
+            </p>
+          </article>
+
+          <article class="docs-block" id="docs-limits">
+            <h3>Limits</h3>
+            <ul class="docs-list">
+              <li>You decide. The desk never prints buy, sell, long, or short.</li>
+              <li>No orders. Research output only.</li>
+              <li>Failed feeds are labelled. They are never dressed up as live.</li>
+              <li>The briefing follows the solved numbers. It does not invent prices.</li>
+              <li>Published constants stay fixed: k = 0.4 · stress pad default = 0.8%.</li>
+              <li>Universe is NVDA, TSLA, AAPL rToken / wrapper focus.</li>
+            </ul>
+          </article>
+
+
+          <article class="docs-block" id="docs-roadmap">
+            <h3>Roadmap</h3>
+            <p class="docs-aside">Modest product path. None of this is promised on a date.</p>
+            <div class="docs-roadmap">
+              <div class="rm-col">
+                <h4>Now</h4>
+                <ul class="docs-list">
+                  <li>Desk freeze · band · lamp · briefing from the frozen table</li>
+                  <li>Open Lattice, Kill Board, Contagion Atlas on the three-name set</li>
+                  <li>Data-quality tags on every input; failed feeds labelled</li>
+                  <li>Local sliders and sample freezes for rehearsal without a live run</li>
+                </ul>
+              </div>
+              <div class="rm-col">
+                <h4>Next</h4>
+                <ul class="docs-list">
+                  <li>Stronger event calendar when calendar feeds stay stable</li>
+                  <li>Saved thesis history in the browser (reload last runs without retyping)</li>
+                  <li>Richer Atlas scenarios (multi-shock paths, clearer spill labels)</li>
+                  <li>Public deploy of the static desk + API behind a fixed host</li>
+                </ul>
+              </div>
+              <div class="rm-col">
+                <h4>Later</h4>
+                <ul class="docs-list">
+                  <li>More names beyond NVDA, TSLA, AAPL when wrapper coverage is honest</li>
+                  <li>Deeper order-book thinness on the wrapper leg (observed depth, not heuristic)</li>
+                  <li>Exportable desk packs (freeze + receipt + lights) for offline review</li>
+                  <li>Optional shared kill-criteria templates — still edited by the human</li>
+                </ul>
+              </div>
+            </div>
+          </article>
+
+          <article class="docs-block" id="docs-faq">
+            <h3>FAQ</h3>
+            <div class="docs-faq">
+              <details>
+                <summary>Does it trade for me?</summary>
+                <p>No. The desk never places orders. Research output only; you decide.</p>
+              </details>
+              <details>
+                <summary>Why observed vs assumed?</summary>
+                <p>
+                  Observed means a live feed returned the figure. Assumed means a placeholder, heuristic,
+                  or intentional skip so the desk can still run. Treat assumed lines as labelled uncertainty,
+                  not as quiet live quotes.
+                </p>
+              </details>
+              <details>
+                <summary>What is rToken / wrapper here?</summary>
+                <p>
+                  The crypto-side leg that tracks the US name when cash is closed — the wrapper last used
+                  against cash last to form premium. Cash and wrapper are separate legs; if the wrapper feed
+                  fails, the desk may fall back to an assumed premium and will say so.
+                </p>
+              </details>
+              <details>
+                <summary>What if a feed fails?</summary>
+                <p>
+                  That field is tagged failed (or assumed if a labelled fallback is used). The numeric desk
+                  still returns. Nothing is painted as observed when the source did not answer.
+                </p>
+              </details>
+              <details>
+                <summary>Sample vs live freeze?</summary>
+                <p>
+                  Lattice, Kill Board, and Atlas can load the last desk freeze from this browser or a built-in
+                  sample freeze. Sample is for rehearsal when you have not run the desk yet; it is labelled sample.
+                </p>
+              </details>
+              <details>
+                <summary>Why no buy / sell?</summary>
+                <p>
+                  The product is a decision aid, not an order ticket. Status and lamp describe room and alignment;
+                  they do not encode a side. Direction words are stripped from text outputs.
+                </p>
+              </details>
+              <details>
+                <summary>What is “hours to cash open”?</summary>
+                <p>
+                  Computed time until the next US regular cash open (ET calendar). It drives decay of the stress pad
+                  and the clock on the desk. If the ET path fails, a fallback may be assumed and tagged.
+                </p>
+              </details>
+              <details>
+                <summary>What does event source_failed mean?</summary>
+                <p>
+                  The event / calendar feed timed out or errored. Math may still use event class none;
+                  the tag tells you the quiet calendar was not verified. Assumed on events means no dated match,
+                  not “none exists.”
+                </p>
+              </details>
+              <details>
+                <summary>Can I edit kill criteria?</summary>
+                <p>
+                  Yes. On the Kill Board you can edit and lock criteria in this browser, then refresh lights
+                  against a loaded freeze. Edits stay local to the browser.
+                </p>
+              </details>
+              <details>
+                <summary>Where does the briefing come from?</summary>
+                <p>
+                  A write-up from the frozen table (symbol, legs, premium, residual, event, hours, band,
+                  first-to-break, factor, lamp). It does not invent prices. If the writer is unavailable,
+                  the briefing is empty and the numbers remain.
+                </p>
+              </details>
+            </div>
+          </article>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <span>Implied World</span>
+        <span>Implied gap mid = premium + k × event × residual BTC</span>
+        <span id="footerAsOf"></span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
