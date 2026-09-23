@@ -1,7 +1,7 @@
 {
   "name": "implied-world",
   "version": "1.0.0",
-  "description": "Implied World — Bitget S2 research desk. Human decides; AI researches. No trading.",
+  "description": "Implied World — overnight rToken research desk. Human decides. No trading.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

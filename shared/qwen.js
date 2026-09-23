@@ -8,7 +8,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 function getConfig() {
   return {
     apiKey: process.env.BITGET_QWEN_API_KEY || '',
-    baseUrl: (process.env.QWEN_BASE_URL || 'https://hackathon.bitgetops.com/v1').replace(/\/$/, ''),
+    baseUrl: (process.env.QWEN_BASE_URL || '').replace(/\/$/, ''),
     model: process.env.QWEN_MODEL || 'qwen3.8-max',
   };
 }
