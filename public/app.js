@@ -193,6 +193,38 @@
       .join('');
   }
 
+  function renderFactor(data) {
+    const f = data?.factor || {};
+    const verdictEl = $('factorVerdict');
+    const noteEl = $('factorNote');
+    const peersEl = $('factorPeers');
+    if (!verdictEl || !noteEl || !peersEl) return;
+
+    const verdict = f.verdict || '—';
+    verdictEl.textContent = verdict;
+    verdictEl.className = 'factor-verdict' + (verdict && verdict !== '—' ? ' has-verdict' : '');
+
+    const note = (f.note || '').trim();
+    noteEl.textContent = note;
+    noteEl.hidden = !note;
+
+    const rows = Array.isArray(f.rows) ? f.rows : [];
+    if (!rows.length) {
+      peersEl.innerHTML = '<div class="factor-peers-empty">No peer premiums in this freeze.</div>';
+      return;
+    }
+    peersEl.innerHTML =
+      '<div class="factor-peers-head"><span>Symbol</span><span>Premium</span><span>Tag</span></div>' +
+      rows
+        .map((r) => {
+          const sym = esc(r.symbol || '—') + (r.is_focus ? ' <em class="focus">focus</em>' : '');
+          const prem = pct(r.premium, 2);
+          const tag = tagSpan(r.tag);
+          return `<div class="factor-peer-row${r.is_focus ? ' is-focus' : ''}"><span class="sym">${sym}</span><span class="prem">${prem}</span><span class="tg">${tag}</span></div>`;
+        })
+        .join('');
+  }
+
   function renderStack(stackEl, legendEl, channels) {
     if (!channels) {
       stackEl.innerHTML = '';
@@ -394,14 +426,7 @@
     ]);
 
     renderStress(data.stress);
-    renderKv($('factorKv'), [
-      ['verdict', data.factor?.verdict || '—'],
-      ['note', esc(data.factor?.note || '')],
-      ...(data.factor?.rows || []).map((r) => [
-        r.symbol + (r.is_focus ? ' (focus)' : ''),
-        `${pct(r.premium, 2)} ${tagSpan(r.tag)}`,
-      ]),
-    ]);
+    renderFactor(data);
     renderKv($('sizeKv'), [
       ['notional', (data.size?.notional_usdt ?? 0) + ' USDT'],
       ['size_eats_room_bps', String(data.size?.size_eats_room_bps ?? 'n/a')],

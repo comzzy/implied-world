@@ -1535,3 +1535,86 @@ table.dense tr.die td { color: var(--bad); }
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+
+/* Factor: verdict + wrapped note + peer table (not stretched kv lines) */
+.factor-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.factor-verdict {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.factor-verdict.has-verdict {
+  color: var(--accent, #1a3a6b);
+}
+.factor-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+}
+.factor-peers {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) auto;
+  gap: 2px 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  align-items: baseline;
+}
+.factor-peers-head {
+  display: contents;
+}
+.factor-peers-head > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 2px;
+}
+.factor-peer-row {
+  display: contents;
+}
+.factor-peer-row .sym {
+  color: var(--ink);
+  font-weight: 600;
+  min-width: 0;
+}
+.factor-peer-row .sym .focus {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.factor-peer-row .prem {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.factor-peer-row .tg {
+  text-align: right;
+}
+.factor-peer-row.is-focus .sym {
+  color: var(--accent, #1a3a6b);
+}
+.factor-peers-empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
