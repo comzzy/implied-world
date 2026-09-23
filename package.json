@@ -8,7 +8,7 @@
     "test:sanitize": "node -e \"const {sanitizeText}=require('./shared/sanitize'); const o=sanitizeText('BUY NVDA and go long'); if(/BUY|SELL|LONG|SHORT/i.test(o)){console.error('FAIL',o);process.exit(1)} console.log('PASS',o);\""
   },
   "engines": {
-    "node": ">=18"
+    "node": "24.x"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
