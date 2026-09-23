@@ -361,8 +361,8 @@ app.post('/api/briefing', async (req, res) => {
       55000,
       Math.max(
         Number(body.timeoutMs) || 0,
-        envMs > 0 ? Math.max(envMs, 40000) : 40000,
-        process.env.VERCEL ? 40000 : 50000
+        envMs > 0 ? Math.max(envMs, 45000) : 45000,
+        process.env.VERCEL ? 50000 : 55000
       )
     );
 
@@ -589,24 +589,169 @@ function normalizePctArray(arr, fallbackPct, asDecimal) {
   });
 }
 
+function pctPlain(x, digits = 2) {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return 'n/a';
+  return (n * 100).toFixed(digits) + '%';
+}
+
+function statusPlainBand(st) {
+  const map = {
+    ROOM_LEFT: 'room left',
+    NO_ROOM: 'no room',
+    OPEN_BUT_UNSTABLE: 'open but unstable',
+  };
+  return map[st] || String(st || '—');
+}
+
+function styleHorizonLine(style) {
+  if (style === 'event_window') {
+    return 'through the named event window into the next US cash open';
+  }
+  if (style === 'intraday_wrapper') {
+    return 'near-term wrapper room into the next cash open or same-session print';
+  }
+  return 'overnight or multi-session hold into the next US cash open (any day, not Monday-only)';
+}
+
+/**
+ * Always-on research note from the frozen table.
+ * Used when Qwen is slow/off so the desk still ships a convincing write-up.
+ */
+function buildDeskNote(ctx) {
+  const f = ctx.freeze || {};
+  const band = ctx.band || {};
+  const style = String(ctx.style || f.style || 'weekend_swing');
+  const thesis = String(ctx.thesis || f.thesis || '').trim();
+  const hours = f.hoursToCashOpen || f.hoursToOpen || {};
+  const prem = f.premium?.value;
+  const btc = f.btc24hReturn?.value;
+  const ev = f.eventClass?.value || 'none';
+  const evTag = f.eventClass?.tag || '';
+  const premTag = f.premium?.tag || '';
+  const btcTag = f.btc24hReturn?.tag || '';
+  const hoursVal = hours.hours;
+  const hoursTag = hours.tag || 'computed';
+  const status = band.status;
+  const lo = band.implied_gap_lo;
+  const mid = band.implied_gap_mid;
+  const hi = band.implied_gap_hi;
+  const first = ctx.size?.first_to_die || ctx.size?.firstToDie || null;
+  const factor = ctx.factor?.verdict || null;
+  const lamp = ctx.receipt?.lamp || null;
+  const sym = f.symbol || 'NAME';
+  const horizon = styleHorizonLine(style);
+
+  const weakTags = [];
+  for (const [label, tag] of [
+    ['premium', premTag],
+    ['BTC residual', btcTag],
+    ['event', evTag],
+    ['hours', hoursTag],
+    ['cash', f.cashClose?.tag],
+    ['rToken', f.rtoken?.tag],
+  ]) {
+    if (tag === 'assumed' || tag === 'source_failed' || tag === 'failed') {
+      weakTags.push(label + ' (' + tag + ')');
+    }
+  }
+
+  const evidenceParts = [
+    sym +
+      ' live wrapper premium is ' +
+      pctPlain(prem) +
+      (premTag ? ' [' + premTag + ']' : '') +
+      ', against an implied band of ' +
+      pctPlain(lo) +
+      ' / ' +
+      pctPlain(mid) +
+      ' / ' +
+      pctPlain(hi) +
+      ' (' +
+      statusPlainBand(status) +
+      ').',
+    'BTC residual ' +
+      pctPlain(btc) +
+      (btcTag ? ' [' + btcTag + ']' : '') +
+      '; event class ' +
+      ev +
+      (evTag ? ' [' + evTag + ']' : '') +
+      '; ' +
+      (Number.isFinite(Number(hoursVal))
+        ? Number(hoursVal).toFixed(1) + 'h to cash open [' + hoursTag + ']'
+        : 'hours to open unavailable') +
+      '.',
+  ];
+  if (thesis) {
+    evidenceParts.push('Stated thesis: ' + thesis.slice(0, 220) + (thesis.length > 220 ? '…' : '') + '.');
+  }
+
+  let implied;
+  if (status === 'NO_ROOM') {
+    implied =
+      'Into the next cash open under ' +
+      style +
+      ' (' +
+      horizon +
+      '), premium already sits at or above the band high — the overnight idea has no measured room left on this freeze.';
+  } else if (status === 'OPEN_BUT_UNSTABLE') {
+    implied =
+      'Under ' +
+      style +
+      ' (' +
+      horizon +
+      '), the band still shows space under the high, but the setup is marked open but unstable — thin book and/or a live event weight against a clean overnight hold.';
+  } else {
+    implied =
+      'Under ' +
+      style +
+      ' (' +
+      horizon +
+      '), premium at ' +
+      pctPlain(prem) +
+      ' sits inside a ' +
+      pctPlain(lo) +
+      '–' +
+      pctPlain(hi) +
+      ' band with status room left — the freeze still maps measurable room into the next US cash open.';
+  }
+
+  const stressBits = [];
+  if (first) stressBits.push('size stress flags ' + String(first) + ' as first to break');
+  if (factor) stressBits.push('factor check: ' + String(factor));
+  if (lamp) stressBits.push('lamp ' + String(lamp));
+  const stress =
+    (stressBits.length
+      ? stressBits.join('; ') + '.'
+      : 'Stress table is attached to the same freeze.') +
+    ' Twin and slider checks on this page re-price the same tagged inputs without inventing prints.';
+
+  const considerations =
+    (weakTags.length
+      ? 'Treat as soft: ' + weakTags.join(', ') + '. '
+      : 'Core legs on this freeze are tagged observed or computed. ') +
+    'Hours decay the stress pad as the open approaches; a failed event tag does not invent calendar risk — it leaves event weight thin on purpose.';
+
+  const invalidation =
+    'Kill the thesis if live premium prints at or above the band high (' +
+    pctPlain(hi) +
+    ') into the next cash open, or if status flips to no room / open but unstable while your kill lights trip. Human decides — this note places no order.';
+
+  return {
+    evidence: evidenceParts.join(' '),
+    implied_world: implied,
+    stress,
+    considerations,
+    invalidation,
+  };
+}
+
 async function askQwenBriefing(ctx) {
+  const fallback = buildDeskNote(ctx);
   const f = ctx.freeze || {};
   const hours = f.hoursToCashOpen || f.hoursToOpen || {};
   const style = String(ctx.style || f.style || 'weekend_swing');
   const thesis = String(ctx.thesis || f.thesis || '').slice(0, 400);
-  const STYLE_HORIZON = {
-    weekend_swing:
-      'Style weekend_swing: overnight or multi-session hold into the next US cash open. Not Monday-only — any calendar gap to the next open.',
-    event_window:
-      'Style event_window: through the named event window into the next US cash open.',
-    intraday_wrapper:
-      'Style intraday_wrapper: near-term wrapper room into the next cash open or same-session print.',
-  };
-  const horizon =
-    STYLE_HORIZON[style] ||
-    'Horizon: into the next US cash open for the chosen style (any day of the week).';
-
-  // Compact frozen table only — not the entire response blob.
   const compact = {
     symbol: f.symbol,
     style,
@@ -631,71 +776,69 @@ async function askQwenBriefing(ctx) {
     lamp: ctx.receipt?.lamp || null,
   };
 
-  const timeoutMs = Number(ctx.timeoutMs) || Number(process.env.QWEN_TIMEOUT_MS) || (process.env.VERCEL ? 28000 : 50000);
+  // Prefer a finished note over a slow empty one. Cap Qwen; fall back to desk note.
+  const timeoutMs = Math.min(
+    Number(ctx.timeoutMs) || Number(process.env.QWEN_TIMEOUT_MS) || 35000,
+    35000
+  );
+
   const system =
-    'You write research notes for Implied World, an overnight US equity rToken desk. ' +
-    'Output JSON only with keys: evidence, implied_world, stress, considerations, invalidation. ' +
-    'Write like a senior desk note a PM would trust: concrete, calm, specific. ' +
-    'Each key gets 1–3 full sentences (about 8–12 sentences total). ' +
-    'evidence: what the frozen tags actually say (premium vs cash/wrapper, BTC residual, event, hours). ' +
-    'implied_world: what room (or lack of it) the band implies into the next cash open for this style — cite lo/mid/hi and status in percent terms. ' +
-    'stress: what breaks first and how twin/factor colour the picture. ' +
-    'considerations: what a careful reader still has to weigh (thin book, failed tags, calendar). ' +
-    'invalidation: the precise condition that kills the thesis (premium at/above band high, etc). ' +
-    'Use ONLY numbers and tags in the frozen table. If a tag is assumed or source_failed, say so plainly. ' +
-    'Never say BUY, SELL, LONG, SHORT, or recommend a side. No hype, slogans, or filler. No invented prices. ' +
-    'Do not assume the open is Monday — frame to the next US cash open for this style.';
+    'Implied World desk note. JSON only: evidence, implied_world, stress, considerations, invalidation. ' +
+    'Senior overnight rToken desk voice: calm, specific, persuasive. One or two sentences per key. ' +
+    'Cite table percents. Frame to the next US cash open for the style — not Monday-only. ' +
+    'Name assumed/source_failed tags. No BUY/SELL/LONG/SHORT. No hype. No invented prices.';
 
   const user =
-    horizon +
+    styleHorizonLine(style) +
     '\nThesis: ' +
-    (thesis || '(none given)') +
-    '\nFrozen table:\n' +
+    (thesis || '(none)') +
+    '\n' +
     JSON.stringify(compact);
 
-  const raw = await Promise.race([
-    chat({
+  try {
+    const raw = await chat({
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },
       ],
       json: true,
       timeoutMs,
-      maxTokens: Number(process.env.QWEN_MAX_TOKENS) || 720,
-      temperature: 0.28,
-    }),
-    new Promise((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`Qwen briefing timed out after ${timeoutMs}ms`)),
-        timeoutMs
-      )
-    ),
-  ]);
+      maxTokens: Math.min(Number(process.env.QWEN_MAX_TOKENS) || 560, 640),
+      temperature: 0.22,
+    });
 
-  function pick(obj) {
-    return {
-      evidence: sanitizeText(String(obj.evidence || '')),
-      implied_world: sanitizeText(String(obj.implied_world || obj.impliedWorld || '')),
-      stress: sanitizeText(String(obj.stress || '')),
-      considerations: sanitizeText(String(obj.considerations || '')),
-      invalidation: sanitizeText(String(obj.invalidation || '')),
-    };
-  }
-
-  if (typeof raw === 'string') {
-    try {
-      return pick(JSON.parse(raw));
-    } catch {
+    function pick(obj) {
       return {
-        evidence: sanitizeText(raw.slice(0, 800)),
-        implied_world: '',
-        stress: '',
-        considerations: '',
-        invalidation: '',
+        evidence: sanitizeText(String(obj.evidence || '')),
+        implied_world: sanitizeText(String(obj.implied_world || obj.impliedWorld || '')),
+        stress: sanitizeText(String(obj.stress || '')),
+        considerations: sanitizeText(String(obj.considerations || '')),
+        invalidation: sanitizeText(String(obj.invalidation || '')),
       };
     }
+
+    let drafted;
+    if (typeof raw === 'string') {
+      try {
+        drafted = pick(JSON.parse(raw));
+      } catch {
+        drafted = null;
+      }
+    } else {
+      drafted = pick(raw || {});
+    }
+
+    const filled =
+      drafted &&
+      [drafted.evidence, drafted.implied_world, drafted.invalidation].filter(
+        (x) => x && String(x).trim().length > 20
+      ).length >= 2;
+
+    return filled ? drafted : fallback;
+  } catch (err) {
+    console.log('Qwen briefing fallback to desk note:', err.message);
+    return fallback;
   }
-  return pick(raw || {});
 }
 
 function numTag(field) {
