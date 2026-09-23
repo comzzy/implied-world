@@ -1,4 +1,4 @@
-/* Kill Board — what would prove the overnight rToken idea wrong. */
+/* Kill Board — what would prove the overnight rToken idea wrong. Live desk freeze only. */
 (function () {
   const $ = (id) => document.getElementById(id);
   const STORAGE = 'iw:killBoard';
@@ -126,15 +126,36 @@
     );
   }
 
+  function emptyState(msg) {
+    freeze = null;
+    band = null;
+    from = 'none';
+    criteria = [];
+    const list = $('killList');
+    if (list) list.innerHTML = '';
+    const dq = $('dqBadge');
+    if (dq) dq.hidden = true;
+    $('metaLine').textContent =
+      msg ||
+      'No last desk freeze. Run the Desk first, then Load last freeze.';
+  }
+
   function loadLastFreeze() {
     try {
       const raw = localStorage.getItem('iw:lastFreeze');
       if (!raw) {
-        $('metaLine').textContent = 'No last desk freeze. Use sample or run the Desk.';
+        emptyState(
+          'No last desk freeze. Run the Desk first, then Load last freeze.'
+        );
         return false;
       }
       const parsed = JSON.parse(raw);
-      if (!parsed?.freeze) return false;
+      if (!parsed?.freeze) {
+        emptyState(
+          'Last desk payload missing freeze. Run the Desk again, then Load last freeze.'
+        );
+        return false;
+      }
       freeze = parsed.freeze;
       band = parsed.band || null;
       from = 'desk';
@@ -147,31 +168,6 @@
       showFail(err);
       return false;
     }
-  }
-
-  async function loadSample() {
-    const symbol = $('symbol').value;
-    let r;
-    try {
-      r = await fetch('/api/sample-freeze?symbol=' + encodeURIComponent(symbol));
-    } catch (err) {
-      showFail(err);
-      throw err;
-    }
-    const j = await r.json().catch(() => ({
-      ok: false,
-      error: r.statusText,
-      failureKind: 'api',
-    }));
-    if (!j.ok) {
-      showFail(null, j, r);
-      throw new Error(j.error || 'sample failed');
-    }
-    freeze = j.freeze;
-    band = j.band;
-    from = 'sample';
-    $('metaLine').textContent = 'Sample · ' + j.symbol;
-    renderDqBadge(freeze);
   }
 
   function mergeEdits(apiCriteria) {
@@ -193,7 +189,25 @@
 
   async function refreshBoard() {
     try {
-      if (!freeze) await loadSample();
+      if (!freeze) {
+        emptyState(
+          'No freeze loaded. Run the Desk first, then Load last freeze.'
+        );
+        return;
+      }
+      const want = $('symbol').value;
+      if (freeze.symbol && freeze.symbol !== want) {
+        emptyState(
+          'Loaded freeze is for ' +
+            freeze.symbol +
+            ', not ' +
+            want +
+            '. Run Desk for ' +
+            want +
+            ' or Load last freeze that matches.'
+        );
+        return;
+      }
       const body = {
         freeze,
         band,
@@ -243,14 +257,10 @@
       renderList();
       savePersisted();
       renderDqBadge(freeze);
-      const src = from === 'sample' ? 'sample' : 'desk freeze';
       $('metaLine').textContent =
         'Kill board · ' +
         (j.symbol || freeze.symbol) +
-        ' · ' +
-        src +
-        (j.fromSample ? ' · sample' : '') +
-        ' · ' +
+        ' · desk freeze · ' +
         criteria.length +
         ' criteria';
     } catch (err) {
@@ -329,23 +339,24 @@
     criteria = [];
     if (loadLastFreeze()) refreshBoard();
   });
-  $('useSample').addEventListener('click', () => {
-    criteria = [];
-    loadSample().then(refreshBoard).catch(() => {});
-  });
   $('refresh').addEventListener('click', () => refreshBoard());
   $('symbol').addEventListener('change', () => {
-    if (from === 'sample') {
-      criteria = [];
-      loadSample().then(refreshBoard).catch(() => {});
+    const want = $('symbol').value;
+    if (!freeze || (freeze.symbol && freeze.symbol !== want)) {
+      emptyState(
+        'Symbol changed to ' +
+          want +
+          '. Load a matching last desk freeze (or run Desk for ' +
+          want +
+          ').'
+      );
+      return;
     }
+    criteria = [];
+    refreshBoard();
   });
 
   if (loadLastFreeze()) {
-    refreshBoard().catch(() => loadSample().then(refreshBoard));
-  } else {
-    loadSample()
-      .then(refreshBoard)
-      .catch((e) => showFail(e));
+    refreshBoard().catch((e) => showFail(e));
   }
 })();

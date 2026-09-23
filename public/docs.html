@@ -102,7 +102,7 @@
             <h3>Open Lattice</h3>
             <p>
               A Monday cash-open rehearsal grid. Rows are cash open (−3%…+3%); columns are BTC residual
-              (−3% / 0 / +3%). Optional wrapper bump +1% on every cell. Load the last desk freeze or a sample,
+              (−3% / 0 / +3%). Optional wrapper bump +1% on every cell. Load the last live desk freeze,
               then run the lattice to see which cells still have room. Human decides — no orders.
             </p>
           </article>
@@ -121,7 +121,7 @@
             <p>
               Shock one name and see whether stress stays local or hits NVDA, TSLA, and AAPL together.
               Wrapper shocks apply to the source name only; BTC residual and event shocks are shared.
-              Heat shows room / no room / unstable per name. Use last desk freeze or sample freezes.
+              Heat shows room / no room / unstable per name. Use the last live desk freeze only; peers are live-frozen.
             </p>
           </article>
 
@@ -178,7 +178,7 @@
                   <li>Desk freeze · band · lamp · briefing from the frozen table</li>
                   <li>Open Lattice, Kill Board, Contagion Atlas on the three-name set</li>
                   <li>Data-quality tags on every input; failed feeds labelled</li>
-                  <li>Local sliders and sample freezes for rehearsal without a live run</li>
+                  <li>Local sliders for what-if; Lattice / Kill / Atlas use last live desk freeze only</li>
                 </ul>
               </div>
               <div class="rm-col">
@@ -222,21 +222,22 @@
                 <p>
                   The crypto-side leg that tracks the US name when cash is closed — the wrapper last used
                   against cash last to form premium. Cash and wrapper are separate legs; if the wrapper feed
-                  fails, the desk may fall back to an assumed premium and will say so.
+                  fails, that leg is tagged failed and the desk will not invent a mid price.
                 </p>
               </details>
               <details>
                 <summary>What if a feed fails?</summary>
                 <p>
-                  That field is tagged failed (or assumed if a labelled fallback is used). The numeric desk
-                  still returns. Nothing is painted as observed when the source did not answer.
+                  That field is tagged failed (or assumed only for calendar / thin-book heuristics).
+                  Core cash and rToken legs must be live; otherwise the desk returns missing data.
+                  Nothing is painted as observed when the source did not answer.
                 </p>
               </details>
               <details>
-                <summary>Sample vs live freeze?</summary>
+                <summary>Where do Lattice / Kill / Atlas get numbers?</summary>
                 <p>
-                  Lattice, Kill Board, and Atlas can load the last desk freeze from this browser or a built-in
-                  sample freeze. Sample is for rehearsal when you have not run the desk yet; it is labelled sample.
+                  From the last live desk freeze saved in this browser only. Run the Desk first, then load that
+                  freeze. There is no sample or demo path — missing freezes show an empty state.
                 </p>
               </details>
               <details>

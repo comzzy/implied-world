@@ -370,7 +370,9 @@
         .filter(Boolean)
         .join('\n\n');
     } else {
-      briefingEl.innerHTML = `<span class="err">Briefing unavailable${data.briefing_error ? ': ' + esc(data.briefing_error) : ''}. Numeric desk is intact.</span>`;
+      // One compact muted line only — never stack a second fail-banner here.
+      briefingEl.innerHTML =
+        '<span class="err">Research briefing unavailable — live numbers above still stand.</span>';
     }
 
     const tw = data.twin;
@@ -534,20 +536,7 @@
         return;
       }
       renderDesk(data);
-      if (data.failureKind === 'writeup' || data.briefing_error) {
-        // Soft fail: numbers shown; surface writeup failure plainly
-        const br = $('briefing');
-        if (br && !data.briefing) {
-          const kind = data.failureKind || 'writeup';
-          const msg = data.failureMessage || data.briefing_error || 'Writeup unavailable';
-          br.innerHTML =
-            '<span class="fail-banner writeup"><span class="fail-kind">' +
-            esc(kind) +
-            '</span>' +
-            esc(msg) +
-            ' Numeric desk is intact.</span>';
-        }
-      }
+      // Soft writeup fail is already a single muted line inside #briefing via renderDesk.
     } catch (err) {
       showDeskFailure(err);
     } finally {

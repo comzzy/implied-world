@@ -1,4 +1,4 @@
-/* Open Lattice — Monday open check for overnight rToken theses. */
+/* Open Lattice — Monday open check for overnight rToken theses. Live desk freeze only. */
 (function () {
   const $ = (id) => document.getElementById(id);
 
@@ -110,17 +110,38 @@
     return (n >= 0 ? '+' : '') + n.toFixed(0) + '%';
   }
 
+  function clearGrid() {
+    const thead = $('latticeTable').querySelector('thead');
+    const tbody = $('latticeTable').querySelector('tbody');
+    if (thead) thead.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
+  }
+
+  function emptyState(msg) {
+    freeze = null;
+    from = 'none';
+    clearGrid();
+    const dq = $('dqBadge');
+    if (dq) dq.hidden = true;
+    $('metaLine').textContent =
+      msg ||
+      'No last desk freeze. Run the Desk first, then Load last freeze.';
+  }
+
   function loadLastFreeze() {
     try {
       const raw = localStorage.getItem('iw:lastFreeze');
       if (!raw) {
-        $('metaLine').textContent =
-          'No last desk freeze found. Run the Desk first, or use sample.';
+        emptyState(
+          'No last desk freeze. Run the Desk first, then Load last freeze.'
+        );
         return false;
       }
       const parsed = JSON.parse(raw);
       if (!parsed?.freeze) {
-        $('metaLine').textContent = 'Last desk payload missing freeze. Use sample.';
+        emptyState(
+          'Last desk payload missing freeze. Run the Desk again, then Load last freeze.'
+        );
         return false;
       }
       freeze = parsed.freeze;
@@ -139,35 +160,27 @@
     }
   }
 
-  async function loadSample() {
-    const symbol = $('symbol').value;
-    let r;
-    try {
-      r = await fetch('/api/sample-freeze?symbol=' + encodeURIComponent(symbol));
-    } catch (err) {
-      showFail(err);
-      throw err;
-    }
-    const j = await r.json().catch(() => ({
-      ok: false,
-      error: r.statusText,
-      failureKind: 'api',
-    }));
-    if (!j.ok) {
-      showFail(null, j, r);
-      throw new Error(j.failureMessage || j.error || 'sample failed');
-    }
-    freeze = j.freeze;
-    from = 'sample';
-    $('metaLine').textContent =
-      'Sample · ' + j.symbol + ' · demo path (no live feeds required)';
-    renderDqBadge(freeze);
-  }
-
   async function runLattice() {
     try {
-      if (!freeze) await loadSample();
-      if (from === 'sample' && freeze.symbol !== $('symbol').value) await loadSample();
+      if (!freeze) {
+        emptyState(
+          'No freeze loaded. Run the Desk first, then Load last freeze.'
+        );
+        return;
+      }
+      const want = $('symbol').value;
+      if (freeze.symbol && freeze.symbol !== want) {
+        emptyState(
+          'Loaded freeze is for ' +
+            freeze.symbol +
+            ', not ' +
+            want +
+            '. Run Desk for ' +
+            want +
+            ' or Load last freeze that matches.'
+        );
+        return;
+      }
 
       const wrapperBumps = $('wrapBump').checked ? [0.01] : [0];
       const body = {
@@ -199,14 +212,11 @@
       renderGrid(j);
       renderDqBadge(freeze);
       const bump = $('wrapBump').checked ? ' · wrapper bump +1%' : '';
-      const src = from === 'sample' ? 'sample' : 'desk freeze';
       $('metaLine').textContent =
         'Lattice · ' +
         (j.symbol || freeze.symbol) +
-        ' · ' +
-        src +
-        bump +
-        (j.fromSample ? ' · sample' : '');
+        ' · desk freeze' +
+        bump;
     } catch (err) {
       showFail(err);
     }
@@ -243,18 +253,26 @@
   $('loadLast').addEventListener('click', () => {
     if (loadLastFreeze()) runLattice();
   });
-  $('useSample').addEventListener('click', () => {
-    loadSample().then(runLattice).catch(() => {});
-  });
   $('runLattice').addEventListener('click', () => runLattice());
   $('symbol').addEventListener('change', () => {
-    if (from === 'sample') loadSample().then(runLattice).catch(() => {});
+    const want = $('symbol').value;
+    if (!freeze || (freeze.symbol && freeze.symbol !== want)) {
+      emptyState(
+        'Symbol changed to ' +
+          want +
+          '. Load a matching last desk freeze (or run Desk for ' +
+          want +
+          ').'
+      );
+      return;
+    }
+    runLattice();
   });
   $('wrapBump').addEventListener('change', () => {
     if (freeze) runLattice();
   });
 
-  loadSample()
-    .then(runLattice)
-    .catch((e) => showFail(e));
+  if (loadLastFreeze()) {
+    runLattice().catch((e) => showFail(e));
+  }
 })();

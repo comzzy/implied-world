@@ -811,6 +811,11 @@ button.ghost:disabled { opacity: 0.4; cursor: not-allowed; }
   min-width: 0;
   overflow: hidden;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.panel > .brief {
+  flex: 1 1 auto;
 }
 .panel h2 {
   margin: 0 0 8px;
@@ -938,8 +943,19 @@ table.dense tr.die td { color: var(--bad); }
   white-space: pre-wrap;
   line-height: 1.45;
   overflow-wrap: break-word;
+  min-height: 4.5em;
 }
-.brief .err { color: var(--warn); font-family: var(--mono); font-size: 11px; }
+.brief .err {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  display: block;
+}
+.controls textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.55;
+}
 
 #decayChart {
   width: 100%;

@@ -1,10 +1,10 @@
 /**
  * Contagion Atlas — coupled multi-name heat map.
  * Shared residual/event shocks hit all names; wrapper shocks hit only the source name.
+ * Live freezes only — never substitutes sample / demo numbers.
  */
 
 const { solve } = require('./solver');
-const { sampleFreezesAll, sampleFreeze } = require('./sample-freeze');
 const { sanitizeText } = require('../shared/sanitize');
 
 const PLAIN = {
@@ -72,39 +72,90 @@ function applyShock(freeze, shock, { isSource } = {}) {
   return f;
 }
 
+function freezeUsable(f) {
+  if (!f || typeof f !== 'object') return false;
+  if (f._failed || f.source_failed) return false;
+  const cash = f.cashClose?.value;
+  const rt = f.rtoken?.value;
+  const prem = f.premium?.value;
+  // Need premium path or both legs; null cash/rtoken with no premium → unusable
+  if (prem != null && Number.isFinite(Number(prem))) return true;
+  return (
+    cash != null &&
+    Number.isFinite(Number(cash)) &&
+    rt != null &&
+    Number.isFinite(Number(rt))
+  );
+}
+
 /**
- * Build freezes map: prefer provided, else samples.
  * @param {object} [opts]
- * @param {object} [opts.freezes] map symbol → freeze
+ * @param {object} [opts.freezes] map symbol → freeze (may include _failed entries)
  * @param {string} [opts.sourceSymbol]
  * @param {string} [opts.shockType]
- * @param {boolean} [opts.useSample]
  */
 function runAtlas(opts = {}) {
   const sourceSymbol = String(opts.sourceSymbol || 'NVDA').toUpperCase();
   const shockType = String(opts.shockType || 'btc_residual_minus_3');
   const shockDef = SHOCK_TYPES[shockType] || SHOCK_TYPES.btc_residual_minus_3;
 
-  let freezes = opts.freezes && typeof opts.freezes === 'object' ? opts.freezes : null;
-  let fromSample = Boolean(opts.useSample) || !freezes;
-
+  const freezes = opts.freezes && typeof opts.freezes === 'object' ? opts.freezes : null;
   if (!freezes) {
-    freezes = sampleFreezesAll();
-    fromSample = true;
+    const err = new Error(
+      'Run the Desk first, then load that live freeze here. Atlas needs a desk freeze for the focus symbol.'
+    );
+    err.failureKind = 'missing_data';
+    throw err;
   }
 
-  // Ensure all three exist
-  const map = {};
-  for (const sym of SYMBOLS) {
-    map[sym] = freezes[sym] || sampleFreeze(sym);
-    if (!freezes[sym]) fromSample = true;
+  if (!freezeUsable(freezes[sourceSymbol])) {
+    const err = new Error(
+      'Focus symbol ' +
+        sourceSymbol +
+        ' has no usable live freeze. Run the Desk for that name, then load the freeze here.'
+    );
+    err.failureKind = 'missing_data';
+    throw err;
   }
 
   const baseline = {};
   const shocked = {};
+  const failedSymbols = [];
 
   for (const sym of SYMBOLS) {
-    const baseBand = solve(map[sym]);
+    const f = freezes[sym];
+    if (!freezeUsable(f)) {
+      failedSymbols.push(sym);
+      baseline[sym] = {
+        status: 'SOURCE_FAILED',
+        plain: 'Failed',
+        mid: null,
+        lo: null,
+        hi: null,
+        premium: null,
+        failed: true,
+        source_failed: true,
+      };
+      shocked[sym] = {
+        status: 'SOURCE_FAILED',
+        plain: 'Failed',
+        mid: null,
+        lo: null,
+        hi: null,
+        premium: null,
+        flipped: false,
+        is_source: sym === sourceSymbol,
+        failed: true,
+        source_failed: true,
+        note: sanitizeText(
+          (f && (f._failNote || f.note)) ||
+            'Live freeze failed for this name — no sample substituted.'
+        ),
+      };
+      continue;
+    }
+
+    const baseBand = solve(f);
     baseline[sym] = {
       status: baseBand.status,
       plain: PLAIN[baseBand.status],
@@ -114,7 +165,7 @@ function runAtlas(opts = {}) {
       premium: baseBand.premium,
     };
 
-    const fShock = applyShock(map[sym], shockDef, { isSource: sym === sourceSymbol });
+    const fShock = applyShock(f, shockDef, { isSource: sym === sourceSymbol });
     const band = solve(fShock);
     const flippedStatus = band.status !== baseBand.status;
 
@@ -130,8 +181,9 @@ function runAtlas(opts = {}) {
     };
   }
 
-  // Recount flips more carefully: names whose status changed
-  const flipCount = SYMBOLS.filter((s) => shocked[s].flipped).length;
+  const flipCount = SYMBOLS.filter(
+    (s) => shocked[s] && shocked[s].flipped && !shocked[s].failed
+  ).length;
   let breakKind = 'none';
   let breakPlain = 'No name changed status under this shock.';
   if (flipCount === 1) {
@@ -160,7 +212,8 @@ function runAtlas(opts = {}) {
     flipCount,
     breakKind,
     breakPlain,
-    fromSample,
+    fromSample: false,
+    failedSymbols,
     plain_map: PLAIN,
     note: sanitizeText('Human decides. This atlas does not place orders.'),
   };

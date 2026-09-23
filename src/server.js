@@ -25,7 +25,6 @@ const { buildReceipt } = require('./receipt');
 const { runLattice } = require('./lattice');
 const { draftKillCriteria, evaluateBoard } = require('./kill-criteria');
 const { runAtlas, SHOCK_TYPES } = require('./atlas');
-const { sampleFreeze, sampleFreezesAll, sampleDeskPayload } = require('./sample-freeze');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3847;
@@ -52,13 +51,16 @@ app.get('/api/health', async (_req, res) => {
   });
 });
 
-app.get('/api/sample-freeze', (req, res) => {
-  const symbol = String(req.query.symbol || 'NVDA').toUpperCase();
-  if (!getSymbol(symbol) && !['NVDA', 'TSLA', 'AAPL'].includes(symbol)) {
-    return res.status(400).json({ ok: false, error: 'Unsupported symbol' });
-  }
-  const payload = sampleDeskPayload(symbol);
-  res.json(sanitizeObject({ ok: true, ...payload, banner: 'Sample freeze for demo. Human decides.' }));
+app.get('/api/sample-freeze', (_req, res) => {
+  res.status(410).json({
+    ok: false,
+    failureKind: 'missing_data',
+    failureMessage:
+      'Sample freezes are retired. Run the Desk first, then load that live freeze on Lattice / Kill Board / Atlas.',
+    error:
+      'Sample freezes are retired. Run the Desk first, then load that live freeze on Lattice / Kill Board / Atlas.',
+    banner: 'Human decides. This desk does not trade.',
+  });
 });
 
 app.post('/api/recompute', (req, res) => {
@@ -75,10 +77,15 @@ app.post('/api/recompute', (req, res) => {
 app.post('/api/lattice', (req, res) => {
   try {
     const body = req.body || {};
-    let freeze = body.freeze;
+    const freeze = body.freeze;
     if (!freeze) {
-      const symbol = String(body.symbol || 'NVDA').toUpperCase();
-      freeze = sampleFreeze(symbol);
+      return res.status(400).json({
+        ...failurePayload(
+          new Error('Run the Desk first, then load that live freeze here.'),
+          { kind: 'missing_data', status: 400 }
+        ),
+        ok: false,
+      });
     }
     const cashOpens = normalizePctArray(body.cashOpens, [-3, -2, -1, 0, 1, 2, 3], true);
     const residualShocks = normalizePctArray(body.residualShocks, [-3, 0, 3], true);
@@ -95,21 +102,28 @@ app.post('/api/lattice', (req, res) => {
     res.json(sanitizeObject({
       ok: true,
       symbol: freeze.symbol,
-      fromSample: Boolean(freeze._sample) || !body.freeze,
+      fromSample: false,
       ...out,
       banner: 'Human decides. This desk does not trade.',
     }));
   } catch (err) {
-    res.status(400).json({ ...failurePayload(err, { kind: 'api', status: 400 }), ok: false });
+    const kind = err.failureKind || 'api';
+    res.status(400).json({ ...failurePayload(err, { kind, status: 400 }), ok: false });
   }
 });
 
 app.post('/api/kill-board', (req, res) => {
   try {
     const body = req.body || {};
-    let freeze = body.freeze;
+    const freeze = body.freeze;
     if (!freeze) {
-      freeze = sampleFreeze(String(body.symbol || 'NVDA').toUpperCase());
+      return res.status(400).json({
+        ...failurePayload(
+          new Error('Run the Desk first, then load that live freeze here.'),
+          { kind: 'missing_data', status: 400 }
+        ),
+        ok: false,
+      });
     }
     const band = body.band || solve(freeze);
     let criteria = Array.isArray(body.criteria) && body.criteria.length
@@ -128,7 +142,7 @@ app.post('/api/kill-board', (req, res) => {
     res.json(sanitizeObject({
       ok: true,
       symbol: freeze.symbol,
-      fromSample: Boolean(freeze._sample) || !body.freeze,
+      fromSample: false,
       criteria: evaluated,
       band: {
         status: band.status,
@@ -140,7 +154,8 @@ app.post('/api/kill-board', (req, res) => {
       banner: 'Human decides. This desk does not trade.',
     }));
   } catch (err) {
-    res.status(400).json({ ...failurePayload(err, { kind: 'api', status: 400 }), ok: false });
+    const kind = err.failureKind || 'api';
+    res.status(400).json({ ...failurePayload(err, { kind, status: 400 }), ok: false });
   }
 });
 
@@ -156,46 +171,83 @@ app.post('/api/atlas', async (req, res) => {
       });
     }
 
-    let freezes = body.freezes || null;
-    let useSample = Boolean(body.useSample) || !freezes;
+    let freezes = body.freezes && typeof body.freezes === 'object' ? { ...body.freezes } : null;
 
-    // Prefer live freezes when requested and MCP may work; always fall back to sample
-    if (body.live && !freezes) {
-      try {
-        const live = {};
-        await Promise.all(
-          ['NVDA', 'TSLA', 'AAPL'].map(async (sym) => {
-            try {
-              live[sym] = await freezeInputs(sym, { style: 'weekend_swing' });
-            } catch {
-              live[sym] = sampleFreeze(sym);
-            }
-          })
-        );
-        freezes = live;
-        useSample = Object.values(live).every((f) => f && f._sample);
-      } catch {
-        freezes = sampleFreezesAll();
-        useSample = true;
+    // Require a desk freeze for the focus symbol; live-freeze peers. Never sample.
+    if (!freezes) {
+      if (!body.freeze || !body.freeze.symbol) {
+        return res.status(400).json({
+          ...failurePayload(
+            new Error('Run the Desk first, then load that live freeze here.'),
+            { kind: 'missing_data', status: 400 }
+          ),
+          ok: false,
+        });
       }
+      freezes = {};
+      freezes[String(body.freeze.symbol).toUpperCase()] = body.freeze;
     }
 
-    if (!freezes && body.freeze && body.freeze.symbol) {
-      // Single freeze from desk: use it for that symbol, samples for peers
-      freezes = sampleFreezesAll();
-      freezes[String(body.freeze.symbol).toUpperCase()] = body.freeze;
-      useSample = false;
+    const focusKey = String(body.freeze?.symbol || sourceSymbol).toUpperCase();
+    if (!freezes[focusKey] && body.freeze) {
+      freezes[focusKey] = body.freeze;
     }
+    if (!freezes[sourceSymbol] && freezes[focusKey]) {
+      // Allow focus freeze under sourceSymbol if caller set source to match
+      if (focusKey === sourceSymbol) freezes[sourceSymbol] = freezes[focusKey];
+    }
+    if (!freezes[sourceSymbol]) {
+      return res.status(400).json({
+        ...failurePayload(
+          new Error(
+            'Atlas needs a live desk freeze for ' +
+              sourceSymbol +
+              '. Run the Desk for that name, then load the freeze here.'
+          ),
+          { kind: 'missing_data', status: 400 }
+        ),
+        ok: false,
+      });
+    }
+
+    // Live-freeze peers; mark source_failed on error — never invent numbers.
+    await Promise.all(
+      ['NVDA', 'TSLA', 'AAPL'].map(async (sym) => {
+        if (freezes[sym]) return;
+        try {
+          freezes[sym] = await freezeInputs(sym, { style: 'weekend_swing' });
+          const cashOk = freezes[sym]?.cashClose?.value != null;
+          const rtOk = freezes[sym]?.rtoken?.value != null;
+          const premOk = freezes[sym]?.premium?.value != null;
+          if (!premOk && (!cashOk || !rtOk)) {
+            freezes[sym] = {
+              symbol: sym,
+              _failed: true,
+              source_failed: true,
+              _failNote: 'Live peer freeze missing cash or rToken — no sample substituted.',
+            };
+          }
+        } catch (err) {
+          freezes[sym] = {
+            symbol: sym,
+            _failed: true,
+            source_failed: true,
+            _failNote: String(err.message || 'Live peer freeze failed'),
+          };
+        }
+      })
+    );
 
     const out = runAtlas({
       freezes,
       sourceSymbol,
       shockType,
-      useSample,
     });
     res.json(sanitizeObject({
       ok: true,
       ...out,
+      fromSample: false,
+      useSample: false,
       shockTypes: Object.values(SHOCK_TYPES).map((s) => ({
         id: s.id,
         label: s.label,
@@ -205,7 +257,9 @@ app.post('/api/atlas', async (req, res) => {
       banner: 'Human decides. This desk does not trade.',
     }));
   } catch (err) {
-    res.status(400).json({ ...failurePayload(err, { kind: 'api', status: 400 }), ok: false });
+    const kind = err.failureKind || 'api';
+    const status = kind === 'missing_data' ? 400 : 400;
+    res.status(status).json({ ...failurePayload(err, { kind, status }), ok: false });
   }
 });
 
@@ -235,6 +289,30 @@ app.post('/api/implied-world', async (req, res) => {
       style,
       thinWrapper: body.thinWrapper,
     });
+
+    // Core legs must be live — never publish invented mid prices.
+    const cashMissing = freeze.cashClose?.value == null;
+    const rtokenMissing = freeze.rtoken?.value == null;
+
+    if (cashMissing || rtokenMissing) {
+      const parts = [];
+      if (cashMissing) parts.push('cash close');
+      if (rtokenMissing) parts.push('rToken');
+      return res.status(422).json({
+        ...failurePayload(
+          new Error(
+            'Live ' +
+              parts.join(' and ') +
+              ' unavailable for ' +
+              symbol +
+              '. Desk will not invent mid prices. Try again when feeds answer.'
+          ),
+          { kind: 'missing_data', status: 422 }
+        ),
+        freeze,
+        sources: freeze.sources,
+      });
+    }
 
     // 2. Solve + stresses + twin + factor + receipt (no Qwen)
     const band0 = solve(freeze);
@@ -345,7 +423,9 @@ app.post('/api/implied-world', async (req, res) => {
 
     res.json(payload);
   } catch (err) {
-    res.status(500).json(failurePayload(err, { kind: 'server' }));
+    const kind = err.failureKind || 'server';
+    const status = kind === 'missing_data' ? 422 : 500;
+    res.status(status).json(failurePayload(err, { kind, status }));
   }
 });
 

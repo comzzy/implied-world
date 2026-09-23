@@ -114,10 +114,11 @@ async function freezeInputs(symbol, opts = {}) {
   };
   if (cashClose.value == null) {
     cashClose = {
-      value: assumedCash(sym),
-      tag: 'assumed',
+      value: null,
+      tag: 'source_failed',
       source: 'bitget-us',
-      note: 'MCP cash close unavailable; assumed desk placeholder for continuity.',
+      note: 'MCP cash close unavailable; no invented placeholder. Run when feeds answer.',
+      error: cashK.error || cashQuote.error || 'cash close missing',
     };
   } else if (
     cashK.tag === 'assumed' ||
@@ -137,25 +138,18 @@ async function freezeInputs(symbol, opts = {}) {
     note: rQuote.note,
   };
   if (rtoken.value == null) {
-    if (cashQuote.ok && cashQuote.price != null) {
-      rtoken = {
-        value: cashQuote.price,
-        tag: 'assumed',
-        source: 'bitget-us',
-        note:
-          'No wrapper ticker in MCP response; using equity last_price as assumed rToken proxy. ' +
-          (rQuote.error || ''),
-      };
-    } else {
-      const proxyPrem = 0.006;
-      rtoken = {
-        value: cashClose.value * (1 + proxyPrem),
-        tag: 'assumed',
-        source: 'bitget-us',
-        note: 'MCP rToken quote unavailable; assumed as cash×(1+0.6%) proxy.',
-        proxy_premium: proxyPrem,
-      };
-    }
+    rtoken = {
+      value: null,
+      tag: 'source_failed',
+      source: 'bitget-us',
+      tool: rQuote.tool,
+      instrument: rQuote.instrument || rQuote.pair || null,
+      exchange: rQuote.exchange || null,
+      note:
+        'MCP rToken quote unavailable; no equity or cash×premium proxy invented. ' +
+        (rQuote.error || rQuote.note || ''),
+      error: rQuote.error || 'rtoken quote missing',
+    };
   }
 
   const prem = premium(rtoken.value, cashClose.value);
@@ -303,15 +297,14 @@ async function freezeInputs(symbol, opts = {}) {
   };
 }
 
-function assumedPeerPremiums(focus, focusPrem) {
+function assumedPeerPremiums(focus, _focusPrem) {
   const out = {};
   for (const sym of listSymbols()) {
     if (sym === focus) continue;
-    const jitter = sym === 'TSLA' ? 0.001 : -0.0005;
     out[sym] = {
-      value: (Number(focusPrem) || 0.006) + jitter,
-      tag: 'assumed',
-      note: 'Peer premium assumed; MCP US unreachable.',
+      value: null,
+      tag: 'source_failed',
+      note: 'Peer premium unavailable; MCP US unreachable — no invented peer premium.',
     };
   }
   return out;
@@ -330,12 +323,16 @@ async function freezePeerPremiums(focus) {
         ]);
         let cash = k.lastClose ?? q.prevClose ?? q.price;
         let rt = r.ok ? r.price : null;
-        let tag = r.ok && cash != null ? 'observed' : 'assumed';
         if (cash == null || rt == null) {
-          cash = cash ?? assumedCash(sym);
-          rt = rt ?? cash * 1.005;
-          tag = 'assumed';
+          out[sym] = {
+            value: null,
+            tag: 'source_failed',
+            note: 'Peer cash or rToken missing; no invented placeholder.',
+            rtoken_tool: r.tool,
+          };
+          return;
         }
+        let tag = r.ok ? 'observed' : 'assumed';
         if (r.tag === 'assumed') tag = 'assumed';
         const p = premium(rt, cash);
         out[sym] = {
@@ -349,11 +346,6 @@ async function freezePeerPremiums(focus) {
     })
   );
   return out;
-}
-
-function assumedCash(sym) {
-  const table = { NVDA: 120, TSLA: 250, AAPL: 190 };
-  return table[sym] ?? 100;
 }
 
 function tagSource(name, result) {

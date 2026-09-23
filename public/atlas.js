@@ -1,4 +1,4 @@
-/* Atlas — does one overnight rToken shock hit only one name or many? */
+/* Atlas — does one overnight rToken shock hit only one name or many? Live desk freeze only. */
 (function () {
   const $ = (id) => document.getElementById(id);
 
@@ -97,7 +97,6 @@
   }
 
   let deskFreeze = null;
-  let mode = 'sample';
 
   const PILL = {
     ROOM_LEFT: 'room',
@@ -105,23 +104,45 @@
     OPEN_BUT_UNSTABLE: 'unstable',
   };
 
+  function clearHeat() {
+    const heat = $('heat');
+    if (heat) heat.innerHTML = '';
+    const callout = $('breakCallout');
+    if (callout) callout.hidden = true;
+    const dq = $('dqBadge');
+    if (dq) dq.hidden = true;
+  }
+
+  function emptyState(msg) {
+    deskFreeze = null;
+    clearHeat();
+    $('metaLine').textContent =
+      msg ||
+      'No last desk freeze. Run the Desk first, then Use last desk freeze.';
+  }
+
   function loadLastFreeze() {
     try {
       const raw = localStorage.getItem('iw:lastFreeze');
       if (!raw) {
-        $('metaLine').textContent =
-          'No last desk freeze. Sample for all three names.';
+        emptyState(
+          'No last desk freeze. Run the Desk first, then Use last desk freeze.'
+        );
         return false;
       }
       const parsed = JSON.parse(raw);
-      if (!parsed?.freeze) return false;
+      if (!parsed?.freeze) {
+        emptyState(
+          'Last desk payload missing freeze. Run the Desk again, then Use last desk freeze.'
+        );
+        return false;
+      }
       deskFreeze = parsed.freeze;
-      mode = 'desk';
       if (parsed.symbol) $('sourceSymbol').value = parsed.symbol;
       $('metaLine').textContent =
-        'Will blend desk freeze for ' +
+        'Desk freeze for ' +
         (parsed.symbol || deskFreeze.symbol) +
-        ' with samples for peers.';
+        ' — peers will be live-frozen. Run atlas.';
       renderDqBadge(deskFreeze);
       return true;
     } catch (err) {
@@ -131,15 +152,31 @@
   }
 
   async function runAtlas() {
-    const body = {
-      sourceSymbol: $('sourceSymbol').value,
-      shockType: $('shockType').value,
-      useSample: mode !== 'desk',
-    };
-    if (mode === 'desk' && deskFreeze) {
-      body.freeze = deskFreeze;
-      body.useSample = false;
+    if (!deskFreeze) {
+      emptyState(
+        'No freeze loaded. Run the Desk first, then Use last desk freeze.'
+      );
+      return;
     }
+    const want = $('sourceSymbol').value;
+    if (deskFreeze.symbol && deskFreeze.symbol !== want) {
+      emptyState(
+        'Loaded freeze is for ' +
+          deskFreeze.symbol +
+          ', not ' +
+          want +
+          '. Run Desk for ' +
+          want +
+          ' or Use last desk freeze that matches.'
+      );
+      return;
+    }
+
+    const body = {
+      sourceSymbol: want,
+      shockType: $('shockType').value,
+      freeze: deskFreeze,
+    };
 
     let r;
     try {
@@ -171,6 +208,20 @@
       .map((sym) => {
         const c = (data.cells && data.cells[sym]) || {};
         const base = (data.baseline && data.baseline[sym]) || {};
+        if (c.failed || c.source_failed || c.status === 'SOURCE_FAILED') {
+          return (
+            '<div class="atlas-cell">' +
+            '<p class="sym">' +
+            sym +
+            (c.is_source ? '<span class="src-tag">starting</span>' : '') +
+            '</p>' +
+            '<span class="status-pill">Failed</span>' +
+            '<div class="mid">' +
+            esc(c.plain || c.note || 'Live freeze failed for this name') +
+            '</div>' +
+            '</div>'
+          );
+        }
         const pill = PILL[c.status] || '';
         const flipped = c.flipped ? ' flipped' : '';
         const src = c.is_source ? '<span class="src-tag">starting</span>' : '';
@@ -211,35 +262,44 @@
           : 'No break';
     $('breakPlain').textContent = data.breakPlain || '';
 
-    const src =
-      data.fromSample || data.useSample ? 'sample' : 'mixed/live';
     const flips = data.flipCount != null ? data.flipCount : 0;
+    const failed = data.failedSymbols && data.failedSymbols.length
+      ? ' · failed=' + data.failedSymbols.join(',')
+      : '';
     $('metaLine').textContent =
       'Atlas · test=' +
       ((data.shock && data.shock.label) || '—') +
       ' · starting=' +
       data.sourceSymbol +
-      ' · ' +
-      src +
+      ' · live' +
       ' · status changes=' +
-      flips;
+      flips +
+      failed;
   }
 
   $('loadLast').addEventListener('click', () => {
-    loadLastFreeze();
-    runAtlas();
-  });
-  $('useSample').addEventListener('click', () => {
-    mode = 'sample';
-    deskFreeze = null;
-    const _dq=$('dqBadge'); if (_dq) _dq.hidden = true;
-    runAtlas();
+    if (loadLastFreeze()) runAtlas();
   });
   $('runAtlas').addEventListener('click', () => runAtlas());
-  ['sourceSymbol', 'shockType'].forEach((id) => {
-    $(id).addEventListener('change', () => runAtlas());
+  $('sourceSymbol').addEventListener('change', () => {
+    const want = $('sourceSymbol').value;
+    if (!deskFreeze || (deskFreeze.symbol && deskFreeze.symbol !== want)) {
+      emptyState(
+        'Source changed to ' +
+          want +
+          '. Load a matching last desk freeze (or run Desk for ' +
+          want +
+          ').'
+      );
+      return;
+    }
+    runAtlas();
+  });
+  $('shockType').addEventListener('change', () => {
+    if (deskFreeze) runAtlas();
   });
 
-  loadLastFreeze();
-  runAtlas().catch((e) => showFail(e));
+  if (loadLastFreeze()) {
+    runAtlas().catch((e) => showFail(e));
+  }
 })();
