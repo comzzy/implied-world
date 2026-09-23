@@ -223,6 +223,12 @@ app.post('/api/implied-world', async (req, res) => {
   }
 
   try {
+    const t0 = Date.now();
+    // Leave headroom under Vercel function maxDuration (60s on this project).
+    const budgetMs = process.env.VERCEL
+      ? Number(process.env.VERCEL_DESK_BUDGET_MS) || 52000
+      : Number(process.env.DESK_BUDGET_MS) || 180000;
+
     // 1. Freeze Bitget inputs
     const freeze = await freezeInputs(symbol, {
       thesis,
@@ -259,29 +265,42 @@ app.post('/api/implied-world', async (req, res) => {
     let briefing = null;
     let briefing_error = null;
 
-    // 3. Qwen writeup if key present — never block numeric desk
+    // 3. Research briefing if key present — never block numeric desk.
+    // On Vercel, only spend leftover budget so the response returns before a 504.
     if (hasKey()) {
-      try {
-        console.log('Qwen briefing start');
-        const _qt0 = Date.now();
-        briefing = await askQwenBriefing({
-          freeze,
-          band,
-          channels,
-          size,
-          stress,
-          twin,
-          factor,
-          receipt,
-          thesis,
-          style,
-        });
-        briefing = sanitizeObject(briefing);
-        console.log('Qwen briefing ok', Date.now() - _qt0, 'ms');
-      } catch (err) {
+      const elapsed = Date.now() - t0;
+      const remaining = budgetMs - elapsed;
+      const envCap = Number(process.env.QWEN_TIMEOUT_MS) || (process.env.VERCEL ? 22000 : 50000);
+      const qwenMs = Math.max(0, Math.min(envCap, remaining - 2500));
+      if (qwenMs < 6000) {
         briefing = null;
-        briefing_error = err.message;
-        console.log('Qwen briefing fail', err.message);
+        briefing_error =
+          'Research briefing skipped to finish within the platform time limit; numeric desk is intact.';
+        console.log('Qwen briefing skipped; remaining_ms', remaining);
+      } else {
+        try {
+          console.log('Qwen briefing start budget_ms', qwenMs);
+          const _qt0 = Date.now();
+          briefing = await askQwenBriefing({
+            freeze,
+            band,
+            channels,
+            size,
+            stress,
+            twin,
+            factor,
+            receipt,
+            thesis,
+            style,
+            timeoutMs: qwenMs,
+          });
+          briefing = sanitizeObject(briefing);
+          console.log('Qwen briefing ok', Date.now() - _qt0, 'ms');
+        } catch (err) {
+          briefing = null;
+          briefing_error = err.message;
+          console.log('Qwen briefing fail', err.message);
+        }
       }
     } else {
       briefing_error = 'BITGET_QWEN_API_KEY not set; numeric desk returned without writeup.';
@@ -372,7 +391,7 @@ async function askQwenBriefing(ctx) {
     lamp: ctx.receipt?.lamp || null,
   };
 
-  const timeoutMs = Number(process.env.QWEN_TIMEOUT_MS) || 50000;
+  const timeoutMs = Number(ctx.timeoutMs) || Number(process.env.QWEN_TIMEOUT_MS) || (process.env.VERCEL ? 22000 : 50000);
   const system =
     'Writer for Implied World. ' +
     'Output JSON only with keys: evidence, implied_world, stress, considerations, invalidation. ' +

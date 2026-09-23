@@ -511,7 +511,18 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const data = await r.json();
+      const rawText = await r.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        const hint =
+          r.status === 504 || r.status === 502
+            ? 'Platform timeout — the desk ran too long. Try again; numbers-only is safer if the writeup is slow.'
+            : (rawText || 'Non-JSON response').slice(0, 180);
+        showDeskFailure(new Error(hint), { failureKind: r.status === 504 || r.status === 502 ? 'timeout' : 'server', ok: false }, r);
+        return;
+      }
       if (!r.ok || data.ok === false) {
         showDeskFailure(null, data, r);
         return;
