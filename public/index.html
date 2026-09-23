@@ -63,21 +63,21 @@
         </div>
 
         <p class="desk-intro">
-          Freeze overnight inputs, draw the implied room into Monday’s cash open, and see what breaks first if the wrapper, BTC residual, or calendar event moves.
+          Freeze overnight inputs and draw the implied room into Monday’s cash open.
         </p>
 
         <div class="explore-strip" aria-label="Explore related tools">
           <a class="explore-card" href="/lattice.html">
-            <p class="ec-title">Open Lattice</p>
-            <p class="ec-plain">Rehearse Monday’s cash open up or down — see which cells still have room.</p>
+            <p class="ec-title">Lattice</p>
+            <p class="ec-plain">Monday cash open grid</p>
           </a>
           <a class="explore-card" href="/kill.html">
             <p class="ec-title">Kill board</p>
-            <p class="ec-plain">Lock kill criteria and watch the lights into Monday.</p>
+            <p class="ec-plain">Lights into Monday</p>
           </a>
           <a class="explore-card" href="/atlas.html">
-            <p class="ec-title">Contagion Atlas</p>
-            <p class="ec-plain">Shock one name and check if stress stays local or hits all three.</p>
+            <p class="ec-title">Atlas</p>
+            <p class="ec-plain">Shock contagion map</p>
           </a>
         </div>
 
@@ -151,8 +151,8 @@
               <div class="dq-list" id="dqList"></div>
             </div>
 
-            <div id="desk" hidden>
-              <div class="cols">
+            <div id="desk" class="desk-results" hidden>
+              <div class="desk-tiles desk-tiles-2">
                 <section class="panel" id="primaryPanel">
                   <h2>This thesis</h2>
                   <div class="kv" id="primaryKv"></div>
@@ -174,7 +174,7 @@
                 </section>
               </div>
 
-              <div class="cols">
+              <div class="desk-tiles desk-tiles-2">
                 <section class="panel">
                   <h2>Decay</h2>
                   <canvas id="decayChart" width="640" height="140"></canvas>
@@ -195,7 +195,7 @@
                 </section>
               </div>
 
-              <div class="cols">
+              <div class="desk-tiles desk-tiles-3">
                 <section class="panel">
                   <h2>Sliders · local recompute</h2>
                   <div class="sliders">
@@ -219,13 +219,24 @@
                 </section>
 
                 <section class="panel">
-                  <h2>Factor · size · receipt · sources</h2>
+                  <h2>Factor</h2>
                   <div class="kv" id="factorKv"></div>
-                  <h3>Size eats room</h3>
+                </section>
+
+                <section class="panel">
+                  <h2>Size eats room</h2>
                   <div class="kv" id="sizeKv"></div>
-                  <h3>Receipt</h3>
+                </section>
+              </div>
+
+              <div class="desk-tiles desk-tiles-2">
+                <section class="panel">
+                  <h2>Receipt</h2>
                   <pre class="receipt-box" id="receiptBox"></pre>
-                  <h3>Sources</h3>
+                </section>
+
+                <section class="panel">
+                  <h2>Sources</h2>
                   <ul class="sources" id="sourcesList"></ul>
                 </section>
               </div>
