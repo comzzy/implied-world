@@ -6,7 +6,7 @@ You freeze the weekend picture — cash last, wrapper last, BTC residual, hours 
 
 ## What you get
 
-- **Desk** — run a thesis, freeze tagged inputs, draw an implied-gap band, stress / twin / factor / size checks, optional short write-up from the frozen numbers only.
+- **Desk** — run a thesis, freeze tagged inputs, draw an implied-gap band, stress / twin / factor / size checks, optional research briefing from the frozen numbers only.
 - **Open Lattice** — Monday cash-open × BTC residual grid (room left / no room / unstable).
 - **Kill Board** — editable kill criteria with traffic lights against the last freeze.
 - **Contagion Atlas** — shock one name and see whether stress stays local or hits all three.
@@ -14,11 +14,29 @@ You freeze the weekend picture — cash last, wrapper last, BTC residual, hours 
 
 Every important number is tagged `observed`, `assumed`, or `source_failed`. Failed feeds stay labelled; they are never dressed up as live.
 
+## System flow
+
+```mermaid
+flowchart LR
+    A[Market feeds] --> B[Freeze tagged inputs]
+    B --> C[Implied-gap band]
+    C --> D[Stress checks]
+    C --> E[Open Lattice]
+    C --> F[Kill Board]
+    C --> G[Contagion Atlas]
+    D --> H[Status and lamp]
+    B --> I[Research briefing]
+    H --> J[Human decision]
+    I --> J
+```
+
+Market feeds are frozen first. The band, checks, and briefing all use that same snapshot, so the numbers do not shift halfway through a review.
+
 ## Run locally
 
 ```bash
 cp .env.example .env
-# fill in your write-up key and base URL if you want briefings
+# fill in your briefing key and base URL if you want research briefings
 npm install
 npm start
 ```
@@ -42,11 +60,11 @@ Copy `.env.example`. Real keys stay in `.env` (gitignored). Typical vars:
 
 | Variable | Purpose |
 |----------|---------|
-| `BITGET_QWEN_API_KEY` | Write-up key (optional; desk numbers still work without it) |
+| `BITGET_QWEN_API_KEY` | Briefing key (optional; desk numbers still work without it) |
 | `QWEN_BASE_URL` | OpenAI-compatible chat base URL |
-| `QWEN_MODEL` | Model id for the write-up |
+| `QWEN_MODEL` | Model used for the research briefing |
 | `PORT` | HTTP port (default `3847`) |
-| `QWEN_TIMEOUT_MS` | Write-up timeout |
+| `QWEN_TIMEOUT_MS` | Briefing timeout |
 | `SIGNAL_*_TIMEOUT_MS` | Feed timeouts |
 | `SIGNAL_TRY_EVENTS` | Set `1` only if you want the slow earnings news path |
 
@@ -67,9 +85,9 @@ Status is about room, not side:
 - `NO_ROOM` — premium already at or above the top of the band
 - `OPEN_BUT_UNSTABLE` — far below the band with a live event and a thin wrapper book
 
-## Write-up
+## Research briefing
 
-The write-up is drafted from the frozen table only. It does not invent prices for the maths. If the key is missing or the call fails, you still get the full numeric desk (`briefing: null` plus a clear error note). Direction words (buy / sell / long / short) are stripped.
+The research briefing is drafted from the frozen table only. It does not invent prices or change the maths. If the key is missing or the call fails, you still get the full numeric desk (`briefing: null` plus a clear error note). Direction words (buy / sell / long / short) are stripped.
 
 ## Data quality
 
@@ -80,7 +98,7 @@ See `docs/data-quality.md` for how cash, wrapper, book, BTC, Nasdaq, and events 
 1. No orders.
 2. No buy / sell / long / short language in outputs.
 3. Names in scope: NVDA, TSLA, AAPL.
-4. Write-up follows the freeze; freeze numbers are ground truth.
+4. The research briefing follows the freeze; freeze numbers are ground truth.
 5. No secrets in git.
 
 ## License
