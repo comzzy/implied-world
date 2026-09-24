@@ -226,6 +226,7 @@ a:hover { color: var(--accent-2); }
   height: 2px;
   background: currentColor;
   position: relative;
+  transition: background 0.2s ease-out;
 }
 .nav-toggle-bars::before,
 .nav-toggle-bars::after {
@@ -235,6 +236,7 @@ a:hover { color: var(--accent-2); }
   width: 18px;
   height: 2px;
   background: currentColor;
+  transition: transform 0.25s ease-out, top 0.25s ease-out;
 }
 .nav-toggle-bars::before { top: -6px; }
 .nav-toggle-bars::after { top: 6px; }
@@ -1829,5 +1831,365 @@ table.dense tr.die td { color: var(--bad); }
   .canvas-wrap.arrive-on canvas,
   #decayCanvas.arrive-on {
     animation: none !important;
+  }
+}
+
+/* —— site-wide motion pass —— */
+.js-motion .mw-reveal {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.45s ease-out,
+    transform 0.45s ease-out;
+  transition-delay: var(--mw-delay, 0s);
+}
+.js-motion .mw-reveal.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+.js-motion .mw-reveal[data-mw-delay] {
+  transition-delay: attr(data-mw-delay); /* fallback unused; set via style */
+}
+
+/* Hover / press micro-interactions */
+.panel,
+.kill-row,
+.atlas-cell,
+.docs-block,
+.explore-card {
+  transition:
+    transform 0.2s ease-out,
+    box-shadow 0.2s ease-out,
+    background 0.25s ease-out,
+    border-color 0.25s ease-out;
+}
+.panel:hover,
+.kill-row:hover,
+.docs-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(17, 24, 20, 0.06);
+}
+.atlas-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+.explore-card:hover {
+  transform: translateY(-1px);
+}
+
+button.run,
+button.ghost,
+.btn,
+.nav-toggle {
+  transition:
+    transform 0.15s ease-out,
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+button.run:active,
+button.ghost:active:not(:disabled),
+.btn:active,
+.nav-toggle:active {
+  transform: scale(0.97);
+}
+
+/* Drawn underline for in-copy links */
+.docs-body a,
+.brief a,
+.feature-footer-note a,
+.desk-intro a {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1.5px;
+  transition: background-size 0.28s ease-out, color 0.15s ease;
+}
+.docs-body a:hover,
+.brief a:hover,
+.feature-footer-note a:hover,
+.desk-intro a:hover {
+  background-size: 100% 1.5px;
+}
+
+/* Nav active underline slide */
+@media (min-width: 860px) {
+  .nav a {
+    position: relative;
+    border-bottom-color: transparent !important;
+  }
+  .nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.28s ease-out;
+  }
+  .nav a:hover::after,
+  .nav a.active::after {
+    transform: scaleX(1);
+  }
+  .nav a.active {
+    color: var(--accent);
+  }
+}
+
+/* Mobile menu slide/fade */
+@media (max-width: 859px) {
+  .nav {
+    display: flex !important;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition:
+      opacity 0.28s ease-out,
+      transform 0.28s ease-out,
+      visibility 0.28s;
+  }
+  .site-header.nav-open .nav {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+/* Number flash on change */
+.mw-flash,
+.kv .v.mw-flash,
+.prem.mw-flash,
+.mw-num.mw-flash {
+  animation: mw-num-flash 0.65s ease-out;
+}
+@keyframes mw-num-flash {
+  0% { background-color: rgba(37, 99, 235, 0.18); }
+  100% { background-color: transparent; }
+}
+.mw-num {
+  display: inline;
+  border-radius: 2px;
+}
+
+/* Channel bars grow from zero */
+.stack.mw-grow span {
+  transition: width 0.55s ease-out;
+}
+
+/* Lattice sequential cell fill */
+.grid-lattice tbody td.mw-cell {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.grid-lattice tbody td.mw-cell.mw-filled {
+  animation: mw-cell-fill 0.4s ease-out forwards;
+}
+@keyframes mw-cell-fill {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Atlas heat: neutral → heat colour */
+.atlas-cell.heat-neutral {
+  background: var(--card) !important;
+}
+.atlas-cell.heat-on.heat-room {
+  background: rgba(15, 122, 76, 0.1);
+}
+.atlas-cell.heat-on.heat-no-room {
+  background: rgba(185, 28, 28, 0.1);
+}
+.atlas-cell.heat-on.heat-unstable {
+  background: rgba(180, 83, 9, 0.12);
+}
+.atlas-cell.heat-on.heat-failed {
+  background: rgba(26, 58, 107, 0.06);
+}
+.atlas-cell {
+  transition:
+    background 0.5s ease-out,
+    transform 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+}
+
+/* Kill lights: smooth colour + pulse on refresh */
+.kill-light {
+  transition:
+    background 0.35s ease-out,
+    color 0.35s ease-out,
+    border-color 0.35s ease-out,
+    transform 0.2s ease-out;
+}
+.kill-light.mw-pulse,
+.kill-row.mw-pulse .kill-light {
+  animation: mw-light-pulse 0.6s ease-out;
+}
+@keyframes mw-light-pulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.04); filter: brightness(1.08); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Shimmer skeleton while loading */
+.is-loading .mw-skeleton,
+.mw-skeleton {
+  display: none;
+}
+.is-loading .mw-skeleton {
+  display: block;
+}
+.mw-skeleton {
+  margin-top: 8px;
+}
+.mw-skel-row {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.mw-skel-row.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mw-skel-row.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) {
+  .mw-skel-row.cols-2,
+  .mw-skel-row.cols-3 { grid-template-columns: 1fr; }
+}
+.mw-skel-card {
+  height: 88px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(
+    90deg,
+    var(--card) 0%,
+    rgba(37, 99, 235, 0.08) 45%,
+    var(--card) 90%
+  );
+  background-size: 200% 100%;
+  animation: mw-shimmer 1.35s ease-in-out infinite;
+}
+.mw-skel-card.tall { height: 120px; }
+@keyframes mw-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+/* Keep lamp / clock visible during load */
+.is-loading .topbar,
+.is-loading .lamp,
+.is-loading .clock,
+.is-loading .freeze-age {
+  opacity: 1;
+}
+.is-loading #emptyState,
+.is-loading #desk,
+.is-loading #dataQuality {
+  display: none !important;
+}
+.page-hero.is-loading .grid-lattice-wrap,
+.page-hero.is-loading .atlas-heat,
+.page-hero.is-loading .kill-list {
+  position: relative;
+}
+.page-hero.is-loading .grid-lattice-wrap::after,
+.page-hero.is-loading .atlas-heat::after,
+.page-hero.is-loading .kill-list::after {
+  content: "";
+  display: block;
+  height: 72px;
+  margin-top: 10px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(
+    90deg,
+    var(--card) 0%,
+    rgba(37, 99, 235, 0.08) 45%,
+    var(--card) 90%
+  );
+  background-size: 200% 100%;
+  animation: mw-shimmer 1.35s ease-in-out infinite;
+}
+
+/* Docs FAQ open/close */
+.docs-faq details .faq-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease-out;
+}
+.docs-faq details[open] .faq-panel {
+  grid-template-rows: 1fr;
+}
+.docs-faq details .faq-panel > * {
+  overflow: hidden;
+  min-height: 0;
+}
+.docs-faq details p {
+  animation: none;
+}
+.docs-faq details[open] .faq-panel > * {
+  animation: mw-faq-in 0.35s ease-out;
+}
+@keyframes mw-faq-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.docs-faq summary::before {
+  transition: transform 0.2s ease-out;
+}
+.docs-faq details[open] summary::before {
+  transform: rotate(0deg);
+}
+
+/* Progress / meter grow helpers */
+.run-progress-bar {
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-motion .mw-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .panel:hover,
+  .kill-row:hover,
+  .docs-block:hover,
+  .atlas-cell:hover,
+  .explore-card:hover,
+  button.run:active,
+  button.ghost:active:not(:disabled),
+  .btn:active,
+  .nav-toggle:active {
+    transform: none !important;
+    box-shadow: none;
+  }
+  .mw-skel-card,
+  .page-hero.is-loading .grid-lattice-wrap::after,
+  .page-hero.is-loading .atlas-heat::after,
+  .page-hero.is-loading .kill-list::after {
+    animation: none !important;
+  }
+  .grid-lattice tbody td.mw-cell,
+  .grid-lattice tbody td.mw-cell.mw-filled,
+  .kill-light.mw-pulse,
+  .kill-row.mw-pulse .kill-light,
+  .mw-flash,
+  .docs-faq details[open] .faq-panel > *,
+  .stack.mw-grow span {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .docs-faq details .faq-panel {
+    transition: none !important;
+  }
+  .nav a::after {
+    transition: none !important;
+  }
+  @media (max-width: 859px) {
+    .nav {
+      transition: none !important;
+    }
   }
 }

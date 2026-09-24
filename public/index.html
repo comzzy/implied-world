@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/motion.js"></script>
 </head>
 <body class="splash-active">
   <div id="splash" class="splash" role="dialog" aria-label="Implied World" aria-live="polite">
@@ -142,6 +143,22 @@
             </div>
             <p class="hint freeze-saved-hint" id="freezeSavedHint" hidden></p>
 
+
+            <div id="deskSkeleton" class="mw-skeleton" aria-hidden="true">
+              <div class="mw-skel-row cols-2">
+                <div class="mw-skel-card tall"></div>
+                <div class="mw-skel-card tall"></div>
+              </div>
+              <div class="mw-skel-row cols-2">
+                <div class="mw-skel-card"></div>
+                <div class="mw-skel-card"></div>
+              </div>
+              <div class="mw-skel-row cols-3">
+                <div class="mw-skel-card"></div>
+                <div class="mw-skel-card"></div>
+                <div class="mw-skel-card"></div>
+              </div>
+            </div>
             <div id="emptyState" class="empty">Set a thesis and run the desk. Failed feeds show as failed or assumed — never as quiet live quotes.</div>
 
             <div id="dataQuality" class="data-quality" hidden>

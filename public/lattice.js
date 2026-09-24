@@ -193,6 +193,7 @@
         residualShocks: [-0.03, 0, 0.03],
         wrapperBumps,
       };
+      if (window.ImpliedMotion) window.ImpliedMotion.setLoading(true, document.querySelector('.page-hero'));
       let r;
       try {
         r = await fetch('/api/lattice', {
@@ -223,6 +224,8 @@
         bump;
     } catch (err) {
       showFail(err);
+    } finally {
+      if (window.ImpliedMotion) window.ImpliedMotion.setLoading(false, document.querySelector('.page-hero'));
     }
   }
 
@@ -238,13 +241,23 @@
       residuals.map((r) => '<th>BTC ' + pctLabel(r) + '</th>').join('') +
       '</tr>';
 
+    let cellIdx = 0;
     tbody.innerHTML = (grid.rows || [])
       .map((row) => {
         const cells = (row.cells || [])
           .map((c) => {
-            const cls = STATUS_CLASS[c.status] || '';
+            const cls = (STATUS_CLASS[c.status] || '') + ' mw-cell';
             const plain = c.plain || PLAIN[c.status] || c.status;
-            return '<td class="' + cls + '">' + plain + '</td>';
+            const delay = (cellIdx++ * 0.035).toFixed(3) + 's';
+            return (
+              '<td class="' +
+              cls +
+              '" style="animation-delay:' +
+              delay +
+              '">' +
+              plain +
+              '</td>'
+            );
           })
           .join('');
         return (
@@ -256,8 +269,17 @@
         );
       })
       .join('');
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const reduce =
+      window.ImpliedMotion && window.ImpliedMotion.reduced
+        ? window.ImpliedMotion.reduced()
+        : window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
       tbody.querySelectorAll('tr').forEach((tr) => tr.classList.remove('arrive-on'));
+      tbody.querySelectorAll('td.mw-cell').forEach((td) => td.classList.add('mw-filled'));
+    } else if (window.ImpliedMotion) {
+      window.ImpliedMotion.staggerFill(tbody, 'td.mw-cell', 35);
+    } else {
+      tbody.querySelectorAll('td.mw-cell').forEach((td) => td.classList.add('mw-filled'));
     }
   }
 

@@ -227,6 +227,7 @@
       };
       if (!criteria.length) delete body.criteria;
 
+      if (window.ImpliedMotion) window.ImpliedMotion.setLoading(true, document.querySelector('.page-hero'));
       let r;
       try {
         r = await fetch('/api/kill-board', {
@@ -267,8 +268,13 @@
         ' · desk freeze · ' +
         criteria.length +
         ' criteria';
+      if (window.ImpliedMotion) {
+        window.ImpliedMotion.pulse(document.querySelectorAll('.kill-light'));
+      }
     } catch (err) {
       showFail(err);
+    } finally {
+      if (window.ImpliedMotion) window.ImpliedMotion.setLoading(false, document.querySelector('.page-hero'));
     }
   }
 

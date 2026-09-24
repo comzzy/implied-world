@@ -375,9 +375,9 @@
     const b = channels.btc_residual_pct || 0;
     const w = channels.wrapper_pct || 0;
     stackEl.innerHTML =
-      `<span class="name" style="width:${n}%"></span>` +
-      `<span class="btc" style="width:${b}%"></span>` +
-      `<span class="wrapper" style="width:${w}%"></span>`;
+      `<span class="name" data-w="${n}%" style="width:${n}%"></span>` +
+      `<span class="btc" data-w="${b}%" style="width:${b}%"></span>` +
+      `<span class="wrapper" data-w="${w}%" style="width:${w}%"></span>`;
     legendEl.innerHTML =
       `<span class="name"><i></i>name ${n}%</span>` +
       `<span class="btc"><i></i>btc_residual ${b}%</span>` +
@@ -603,6 +603,13 @@
     applySliders();
 
     $('footerAsOf').textContent = 'as of ' + (f.asOf || '');
+
+    if (window.ImpliedMotion) {
+      const desk = $('desk');
+      window.ImpliedMotion.growBars(desk);
+      window.ImpliedMotion.countUps(desk);
+      window.ImpliedMotion.reveal(desk);
+    }
   }
 
   function renderStress(stress) {
@@ -660,6 +667,10 @@
       })),
       firstToDie: first ? { id: first.id, label: first.label, status: first.status } : null,
     });
+    if (window.ImpliedMotion) {
+      window.ImpliedMotion.countUps($('sliderKv'));
+      window.ImpliedMotion.countUps($('firstDie'));
+    }
   }
 
   function esc(s) {
@@ -674,6 +685,7 @@
     const progress = $('runProgress');
     btn.disabled = true;
     btn.textContent = 'Running…';
+    if (window.ImpliedMotion) window.ImpliedMotion.setLoading(true, $('desk-work'));
     const t0 = Date.now();
     let tick = null;
     let wake = null;
@@ -796,6 +808,7 @@
       }
       btn.disabled = false;
       btn.textContent = 'Run desk';
+      if (window.ImpliedMotion) window.ImpliedMotion.setLoading(false, $('desk-work'));
     }
   }
 
@@ -907,6 +920,7 @@
       const target = document.getElementById('desk-work') || document.getElementById('desk-anchor');
       if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
       window.location.hash = 'desk-anchor';
+      if (window.ImpliedMotion) window.ImpliedMotion.scan(document);
     });
   }
 

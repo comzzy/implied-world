@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
+  <script src="/motion.js"></script>
 </head>
 <body>
   <div class="app">
@@ -207,75 +208,95 @@
             <div class="docs-faq">
               <details>
                 <summary>Does it trade for me?</summary>
+                <div class="faq-panel">
                 <p>No. The desk never places orders. Research output only; you decide.</p>
+                </div>
               </details>
               <details>
                 <summary>Why observed vs assumed?</summary>
+                <div class="faq-panel">
                 <p>
                   Observed means a live feed returned the figure. Assumed means a placeholder, heuristic,
                   or intentional skip so the desk can still run. Treat assumed lines as labelled uncertainty,
                   not as quiet live quotes.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>What is rToken / wrapper here?</summary>
+                <div class="faq-panel">
                 <p>
                   The crypto-side leg that tracks the US name when cash is closed — the wrapper last used
                   against cash last to form premium. Cash and wrapper are separate legs; if the wrapper feed
                   fails, that leg is tagged failed and the desk will not invent a mid price.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>What if a feed fails?</summary>
+                <div class="faq-panel">
                 <p>
                   That field is tagged failed (or assumed only for calendar / thin-book heuristics).
                   Core cash and rToken legs must be live; otherwise the desk returns missing data.
                   Nothing is painted as observed when the source did not answer.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>Where do Lattice / Kill / Atlas get numbers?</summary>
+                <div class="faq-panel">
                 <p>
                   From the last live desk freeze saved in this browser only. Run the Desk first, then load that
                   freeze. There is no sample or demo path — missing freezes show an empty state.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>Why no buy / sell?</summary>
+                <div class="faq-panel">
                 <p>
                   The product is a decision aid, not an order ticket. Status and lamp describe room and alignment;
                   they do not encode a side. Direction words are stripped from text outputs.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>What is “hours to cash open”?</summary>
+                <div class="faq-panel">
                 <p>
                   Computed time until the next US regular cash open (ET calendar). It drives decay of the stress pad
                   and the clock on the desk. If the ET path fails, a fallback may be assumed and tagged.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>What does event source_failed mean?</summary>
+                <div class="faq-panel">
                 <p>
                   The event / calendar feed timed out or errored. Math may still use event class none;
                   the tag tells you the quiet calendar was not verified. Assumed on events means no dated match,
                   not “none exists.”
                 </p>
+                </div>
               </details>
               <details>
                 <summary>Can I edit kill criteria?</summary>
+                <div class="faq-panel">
                 <p>
                   Yes. On the Kill Board you can edit and lock criteria in this browser, then refresh lights
                   against a loaded freeze. Edits stay local to the browser.
                 </p>
+                </div>
               </details>
               <details>
                 <summary>Where does the briefing come from?</summary>
+                <div class="faq-panel">
                 <p>
                   A write-up from the frozen table (symbol, legs, premium, residual, event, hours, band,
                   first-to-break, factor, lamp). It does not invent prices. If the writer is unavailable,
                   the briefing is empty and the numbers remain.
                 </p>
+                </div>
               </details>
             </div>
           </article>

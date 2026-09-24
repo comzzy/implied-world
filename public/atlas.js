@@ -181,6 +181,7 @@
       btn.textContent = 'Running…';
     }
     if ($('metaLine')) $('metaLine').textContent = 'Running atlas…';
+    if (window.ImpliedMotion) window.ImpliedMotion.setLoading(true, document.querySelector('.page-hero'));
 
     const body = {
       sourceSymbol: want,
@@ -234,7 +235,16 @@
         btn.disabled = false;
         btn.textContent = prev || 'Run atlas';
       }
+      if (window.ImpliedMotion) window.ImpliedMotion.setLoading(false, document.querySelector('.page-hero'));
     }
+  }
+
+  function heatClassFor(status, failed) {
+    if (failed) return 'heat-failed';
+    if (status === 'ROOM_LEFT') return 'heat-room';
+    if (status === 'NO_ROOM') return 'heat-no-room';
+    if (status === 'OPEN_BUT_UNSTABLE') return 'heat-unstable';
+    return 'heat-failed';
   }
 
   function render(data) {
@@ -245,7 +255,7 @@
         const base = (data.baseline && data.baseline[sym]) || {};
         if (c.failed || c.source_failed || c.status === 'SOURCE_FAILED') {
           return (
-            '<div class="atlas-cell">' +
+            '<div class="atlas-cell heat-failed heat-neutral">' +
             '<p class="sym">' +
             sym +
             (c.is_source ? '<span class="src-tag">starting</span>' : '') +
@@ -260,8 +270,10 @@
         const pill = PILL[c.status] || '';
         const flipped = c.flipped ? ' flipped' : '';
         const src = c.is_source ? '<span class="src-tag">starting</span>' : '';
+        const heatCls = heatClassFor(c.status, false);
         return (
-          '<div class="atlas-cell' +
+          '<div class="atlas-cell heat-neutral ' +
+          heatCls +
           flipped +
           '">' +
           '<p class="sym">' +
@@ -274,11 +286,11 @@
           (c.plain || c.status || '—') +
           '</span>' +
           '<div class="mid">' +
-          'range middle ' +
+          'range middle <span data-mw-count>' +
           pct(c.mid) +
-          '<br />was ' +
+          '</span><br />was <span data-mw-count>' +
           pct(base.mid) +
-          ' · ' +
+          '</span> · ' +
           (base.plain || base.status || '—') +
           '</div>' +
           '</div>'
@@ -288,9 +300,22 @@
 
     heat.classList.remove('arrive-on');
     void heat.offsetWidth;
-    if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+    const reduce =
+      window.ImpliedMotion && window.ImpliedMotion.reduced
+        ? window.ImpliedMotion.reduced()
+        : window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) {
       heat.classList.add('arrive-on');
       heat.querySelectorAll('.atlas-cell').forEach((el) => el.classList.add('arrive-on'));
+    }
+    if (window.ImpliedMotion) {
+      window.ImpliedMotion.heatIn(heat.querySelectorAll('.atlas-cell'));
+      window.ImpliedMotion.countUps(heat);
+    } else {
+      heat.querySelectorAll('.atlas-cell').forEach((el) => {
+        el.classList.remove('heat-neutral');
+        el.classList.add('heat-on');
+      });
     }
 
     const callout = $('breakCallout');
