@@ -62,7 +62,27 @@
 
   const $ = (id) => document.getElementById(id);
 
+  let lastHealth = null;
+  function feedUp(f) {
+    return !!(f && f.value != null && f.tag !== 'source_failed' && f.tag !== 'missing');
+  }
+  function paintFeedLine(freeze) {
+    const el = $('healthLine');
+    if (!el) return;
+    const j = lastHealth || {};
+    const us = j.mcp?.['bitget-us'];
+    const sig = j.mcp?.['bitget-signal'];
+    let cash = us?.ok ? 'up' : 'down';
+    let residual = sig?.ok ? 'up' : 'down';
+    if (freeze && typeof freeze === 'object') {
+      cash = feedUp(freeze.cashClose) && feedUp(freeze.rtoken) ? 'up' : 'down';
+      residual = feedUp(freeze.btc24hReturn) ? 'up' : 'down';
+    }
+    el.textContent = `feeds · writer=${j.qwen_key_present ? 'ready' : 'off'} · cash=${cash} · residual=${residual}`;
+  }
+
   function showDeskFailure(err, data, res) {
+    paintFeedLine((data && data.freeze) || null);
     const kind = (data && data.failureKind) || classifyClientFailure(err, res);
     const msg =
       (data && (data.failureMessage || data.error)) ||
@@ -171,11 +191,8 @@
   async function loadHealth() {
     try {
       const r = await fetch('/api/health');
-      const j = await r.json();
-      const us = j.mcp?.['bitget-us'];
-      const sig = j.mcp?.['bitget-signal'];
-      $('healthLine').textContent =
-        `feeds · writer=${j.qwen_key_present ? 'ready' : 'off'} · cash=${us?.ok ? 'up' : 'down'} · residual=${sig?.ok ? 'up' : 'down'}`;
+      lastHealth = await r.json();
+      paintFeedLine(state && state.freeze);
     } catch (err) {
       $('healthLine').textContent = 'feeds · unreachable (' + err.message + ')';
     }
@@ -499,6 +516,7 @@
     const saved = saveLastFreeze(data);
     $('emptyState').hidden = true;
     renderDataQuality(data.freeze);
+    paintFeedLine(data.freeze);
     $('desk').hidden = false;
     const hint = $('freezeSavedHint');
     if (hint) {

@@ -257,7 +257,7 @@ async function fetchNasdaqLastSession() {
 async function fetchEventClass(symbol) {
   const sym = String(symbol || '').toUpperCase();
   const tryTradfi = String(process.env.SIGNAL_TRY_EVENTS || '').toLowerCase() === '1';
-  const checkedWindow = 'recent headlines + macro calendar (short timeout)';
+  const checkedWindow = 'recent headlines + FOMC news (short timeout)';
 
   const assumedSkip = (error) => ({
     ok: false,
@@ -300,17 +300,18 @@ async function fetchEventClass(symbol) {
 
   await withSoftTimeout(listTools(FAST_OPTS), 3500);
 
-  // Fast paths first: news_feed (headlines) + macro_indicators (macro calendar).
+  // Fast paths first: news_feed (latest, keyword) + macro_indicators (fomc_news).
+  // Actions must match the server's tools/list enums.
   // tradfi_news stays behind SIGNAL_TRY_EVENTS=1 (or last resort when opted in).
   const attempts = [
     {
       tool: 'news_feed',
-      args: { action: 'headlines', symbol: sym, query: sym, limit: 5 },
+      args: { action: 'latest', keyword: sym, limit: 5 },
       timeoutMs: 4000,
     },
     {
       tool: 'macro_indicators',
-      args: { action: 'calendar', lookback_days: 3, lookahead_days: 5, limit: 8 },
+      args: { action: 'fomc_news', limit: 5 },
       timeoutMs: 4000,
     },
   ];

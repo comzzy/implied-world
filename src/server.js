@@ -326,6 +326,21 @@ app.post('/api/briefing', async (req, res) => {
       }),
     });
   }
+  const coreNum = (x) => {
+    const v = x && typeof x === 'object' ? x.value : x;
+    return v != null && v !== '' && Number.isFinite(Number(v));
+  };
+  const missingCore = ['cashClose', 'rtoken', 'premium'].filter((k) => !coreNum(freeze[k]));
+  if (missingCore.length) {
+    return res.status(422).json({
+      ...failurePayload(
+        new Error(
+          `Freeze is missing live numbers (${missingCore.join(', ')}). Run the Desk again when feeds answer.`
+        ),
+        { kind: 'missing_data', status: 422 }
+      ),
+    });
+  }
   if (!hasKey()) {
     return res.status(503).json({
       ...failurePayload(new Error('Research note key not configured.'), {
@@ -357,17 +372,9 @@ app.post('/api/briefing', async (req, res) => {
     const stress = body.stress || null;
     // Standalone note: use a longer budget than the numbers-first desk path.
     const envMs = Number(process.env.QWEN_TIMEOUT_MS) || 0;
-    const timeoutMs = Math.min(
-      55000,
-      Math.max(
-        Number(body.timeoutMs) || 0,
-        envMs > 0 ? Math.max(envMs, 45000) : 45000,
-        process.env.VERCEL ? 50000 : 55000
-      )
-    );
-
-    const briefing = sanitizeObject(
-      await askQwenBriefing({
+    // Hard cap well under Vercel's 60s function limit.
+    const timeoutMs = Math.min(40000, Math.max(Number(body.timeoutMs) || 0, envMs || 0, 35000));
+    const ctx = {
         freeze,
         band,
         size,
@@ -379,8 +386,15 @@ app.post('/api/briefing', async (req, res) => {
         thesis,
         style,
         timeoutMs,
-      })
-    );
+    };
+    let timer;
+    const deadline = new Promise((resolve) => {
+      timer = setTimeout(() => resolve(null), timeoutMs + 3000);
+    });
+    let note = await Promise.race([askQwenBriefing(ctx).catch(() => null), deadline]);
+    clearTimeout(timer);
+    if (!note) note = buildDeskNote(ctx);
+    const briefing = sanitizeObject(note);
     res.json({ ok: true, briefing, style, thesis });
   } catch (err) {
     const msg = String(err.message || err);

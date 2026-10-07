@@ -1511,6 +1511,11 @@ table.dense tr.die td { color: var(--bad); }
 
 /* Failure UX — plain, classified */
 .fail-banner {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
   margin: 12px 0 0;
   padding: 10px 12px;
   border: 1px solid var(--bad, #b42318);
