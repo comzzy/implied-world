@@ -1,14 +1,21 @@
 /**
  * Last real live run per symbol, stored in a private Vercel Blob store.
  * Only successful live runs (core legs observed) are written. Never seeded.
- * Token lives in Vercel env (BLOB_READ_WRITE_TOKEN); never logged or returned.
+ * Auth lives in Vercel env (BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID + OIDC); never logged or returned.
  */
 const SYMBOL_RE = /^[A-Z]{1,6}$/;
 const SAVE_TIMEOUT_MS = 4000;
 const LOAD_TIMEOUT_MS = 4000;
 
+/** Auth: read-write token, or Vercel OIDC with BLOB_STORE_ID (SDK resolves the OIDC token). */
+function storeAuth() {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return 'token';
+  if (process.env.BLOB_STORE_ID) return 'oidc';
+  return null;
+}
+
 function storeReady() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(storeAuth());
 }
 
 function keyFor(symbol) {
@@ -102,4 +109,4 @@ async function attachBriefing(freeze, briefing) {
   await saveLastRun({ ...cur.record, briefing, briefing_error: null });
 }
 
-module.exports = { storeReady, saveLastRun, loadLastRun, attachBriefing, isLiveSuccess };
+module.exports = { storeAuth, storeReady, saveLastRun, loadLastRun, attachBriefing, isLiveSuccess };

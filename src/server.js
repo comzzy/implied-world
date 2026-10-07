@@ -81,6 +81,7 @@ app.get('/api/health', async (_req, res) => {
     },
     symbols: listSymbols(),
     lastRunStore: lastRun.storeReady() ? 'ready' : 'missing',
+    lastRunAuth: lastRun.storeAuth() || 'none',
     constants: { k: K, stress_pad_default: STRESS_PAD_DEFAULT },
     banner: 'Human decides. This desk does not trade.',
   });
