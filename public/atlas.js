@@ -121,6 +121,13 @@
       'No last desk freeze. Run the Desk first, then Use last desk freeze.';
   }
 
+  let freezeLabel = 'desk freeze';
+  function labelFor(parsed) {
+    return parsed && parsed.lastRun && window.IWLastRun
+      ? 'last live run · ' + window.IWLastRun.fmtWat((parsed.freeze && parsed.freeze.asOf) || parsed.at)
+      : 'desk freeze';
+  }
+
   function loadLastFreeze() {
     try {
       let raw = null;
@@ -142,9 +149,12 @@
         return false;
       }
       deskFreeze = parsed.freeze;
+      freezeLabel = labelFor(parsed);
       if (parsed.symbol) $('sourceSymbol').value = parsed.symbol;
       $('metaLine').textContent =
-        'Desk freeze · ' + (parsed.symbol || deskFreeze.symbol);
+        parsed.lastRun && window.IWLastRun
+          ? window.IWLastRun.label(parsed)
+          : 'Desk freeze · ' + (parsed.symbol || deskFreeze.symbol);
       renderDqBadge(deskFreeze);
       return true;
     } catch (err) {
@@ -338,14 +348,15 @@
       ((data.shock && data.shock.label) || '—') +
       ' · starting=' +
       data.sourceSymbol +
-      ' · live' +
+      (freezeLabel === 'desk freeze' ? ' · live' : ' · ' + freezeLabel + ' · peers live') +
       ' · status changes=' +
       flips +
       failed;
   }
 
-  $('loadLast').addEventListener('click', () => {
-    if (loadLastFreeze()) runAtlas();
+  $('loadLast').addEventListener('click', async () => {
+    if (loadLastFreeze()) return runAtlas();
+    if (window.IWLastRun && (await window.IWLastRun.pull($('sourceSymbol').value)) && loadLastFreeze()) runAtlas();
   });
   $('runAtlas').addEventListener('click', () => runAtlas());
   $('sourceSymbol').addEventListener('change', () => {

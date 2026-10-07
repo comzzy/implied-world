@@ -128,6 +128,13 @@
       'No last desk freeze. Run the Desk first, then Load last freeze.';
   }
 
+  let freezeLabel = 'desk freeze';
+  function labelFor(parsed) {
+    return parsed && parsed.lastRun && window.IWLastRun
+      ? 'last live run · ' + window.IWLastRun.fmtWat((parsed.freeze && parsed.freeze.asOf) || parsed.at)
+      : 'desk freeze';
+  }
+
   function loadLastFreeze() {
     try {
       let raw = null;
@@ -150,12 +157,12 @@
       }
       freeze = parsed.freeze;
       from = 'desk';
+      freezeLabel = labelFor(parsed);
       if (parsed.symbol) $('symbol').value = parsed.symbol;
       $('metaLine').textContent =
-        'Loaded desk freeze · ' +
-        (parsed.symbol || freeze.symbol) +
-        ' · saved ' +
-        (parsed.at || '—');
+        parsed.lastRun && window.IWLastRun
+          ? window.IWLastRun.label(parsed)
+          : 'Loaded desk freeze · ' + (parsed.symbol || freeze.symbol) + ' · saved ' + (parsed.at || '—');
       renderDqBadge(freeze);
       return true;
     } catch (err) {
@@ -220,7 +227,7 @@
       $('metaLine').textContent =
         'Lattice · ' +
         (j.symbol || freeze.symbol) +
-        ' · desk freeze' +
+        ' · ' + freezeLabel +
         bump;
     } catch (err) {
       showFail(err);
@@ -283,8 +290,9 @@
     }
   }
 
-  $('loadLast').addEventListener('click', () => {
-    if (loadLastFreeze()) runLattice();
+  $('loadLast').addEventListener('click', async () => {
+    if (loadLastFreeze()) return runLattice();
+    if (window.IWLastRun && (await window.IWLastRun.pull($('symbol').value)) && loadLastFreeze()) runLattice();
   });
   $('runLattice').addEventListener('click', () => runLattice());
   $('symbol').addEventListener('change', () => {

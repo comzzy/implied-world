@@ -240,6 +240,12 @@
                   Core cash and rToken legs must be live; otherwise the desk returns missing data.
                   Nothing is painted as observed when the source did not answer.
                 </p>
+                <p>
+                  Bitget MCP is tried first. If a Bitget MCP price call fails, the wrapper, order book and
+                  BTC change come from Bitget’s public market API, and the US cash close (last completed
+                  session) and Nasdaq session come from Yahoo Finance. Each field names its source. If those
+                  fail too, the Desk shows the last stored live run with its date.
+                </p>
                 </div>
               </details>
               <details>

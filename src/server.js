@@ -8,6 +8,21 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const path = require('path');
 const express = require('express');
 const { hasKey, chat } = require('../shared/qwen');
+const lastRun = require('../shared/last-run');
+let waitUntil = null;
+try {
+  ({ waitUntil } = require('@vercel/functions'));
+} catch (_) {
+  waitUntil = null;
+}
+function background(promise) {
+  const p = Promise.resolve(promise).catch(() => {});
+  if (typeof waitUntil === 'function') {
+    try {
+      waitUntil(p);
+    } catch (_) {}
+  }
+}
 const { sanitizeObject, sanitizeText } = require('../shared/sanitize');
 const { classifyFailure, failurePayload } = require('../shared/failures');
 const bitgetUs = require('../shared/bitget-us');
@@ -65,9 +80,21 @@ app.get('/api/health', async (_req, res) => {
       'bitget-signal': signal,
     },
     symbols: listSymbols(),
+    lastRunStore: lastRun.storeReady() ? 'ready' : 'missing',
     constants: { k: K, stress_pad_default: STRESS_PAD_DEFAULT },
     banner: 'Human decides. This desk does not trade.',
   });
+});
+
+app.get('/api/last-run', async (req, res) => {
+  const symbol = String(req.query.symbol || '').toUpperCase();
+  if (!listSymbols().includes(symbol)) {
+    return res.status(400).json({ ok: false, error: `Unknown symbol. Use: ${listSymbols().join(', ')}` });
+  }
+  const out = await lastRun.loadLastRun(symbol);
+  if (!out.ok) return res.status(out.status || 404).json({ ok: false, symbol, error: out.error });
+  res.set('Cache-Control', 'no-store');
+  res.json({ ...out.record, ok: true, lastRun: true });
 });
 
 app.get('/api/sample-freeze', (_req, res) => {
@@ -395,6 +422,9 @@ app.post('/api/briefing', async (req, res) => {
     clearTimeout(timer);
     if (!note) note = buildDeskNote(ctx);
     const briefing = sanitizeObject(note);
+    if (freeze.symbol && freeze.asOf) {
+      background(lastRun.attachBriefing(freeze, briefing));
+    }
     res.json({ ok: true, briefing, style, thesis });
   } catch (err) {
     const msg = String(err.message || err);
@@ -578,6 +608,7 @@ app.post('/api/implied-world', async (req, res) => {
       constants: { k: K, stress_pad_default: STRESS_PAD_DEFAULT },
     });
 
+    if (lastRun.isLiveSuccess(payload)) background(lastRun.saveLastRun(payload));
     res.json(payload);
   } catch (err) {
     const kind = err.failureKind || 'server';

@@ -12,6 +12,7 @@ const {
   listSymbols,
 } = require('../shared/rtoken');
 const bitgetRest = require('../shared/bitget-rest');
+const yahoo = require('../shared/yahoo');
 const { EVENT_IMPORTANCE } = require('./solver');
 
 
@@ -124,6 +125,34 @@ async function freezeInputs(symbol, opts = {}) {
         })
       );
     }
+    // US cash close: Bitget equity quote first; Yahoo Finance completed-session close on failure.
+    const cashOk = cashK?.lastClose != null || cashQuote?.prevClose != null || cashQuote?.price != null;
+    if (!cashOk) {
+      const prevK = cashK;
+      const prevQ = cashQuote;
+      restJobs.push(
+        yahoo.fetchCashClose(sym).then((y) => {
+          if (y.ok) {
+            sources.push(tagSource('cash_klines_bitget', prevK));
+            cashK = { ...y, fallback_from: mcpErr(prevK) };
+            cashQuote = { ok: false, tag: 'skipped', source: 'bitget-us', error: mcpErr(prevQ) };
+          } else {
+            cashK = { ...prevK, error: `${mcpErr(prevK)} | ${y.error}` };
+          }
+        })
+      );
+    }
+    if (!(nasdaq && nasdaq.ok && nasdaq.value != null)) {
+      const prevN = nasdaq;
+      restJobs.push(
+        yahoo.fetchNasdaqLastSession().then((y) => {
+          if (y.ok) {
+            sources.push(tagSource('nasdaq_bitget', prevN));
+            nasdaq = { ...y, fallback_from: prevN && prevN.error ? String(prevN.error).slice(0, 160) : 'primary failed' };
+          }
+        })
+      );
+    }
     await Promise.all(restJobs);
   }
 
@@ -145,15 +174,18 @@ async function freezeInputs(symbol, opts = {}) {
             ? cashQuote.price
             : null,
     tag: cashK.tag || cashQuote.tag || (cashK.ok || cashQuote.ok ? 'observed' : 'source_failed'),
-    source: 'bitget-us',
+    source: cashK.lastClose != null ? cashK.source || 'bitget-us' : 'bitget-us',
     tool: cashK.tool || cashQuote.tool,
+    session_date: cashK.sessionDate || undefined,
+    note: cashK.note || undefined,
+    fallback_from: cashK.fallback_from,
   };
   if (cashClose.value == null) {
     cashClose = {
       value: null,
       tag: 'source_failed',
       source: 'bitget-us',
-      note: 'MCP cash close unavailable; no invented placeholder. Run when feeds answer.',
+      note: 'Bitget and Yahoo Finance cash close unavailable; no invented placeholder. Run when feeds answer.',
       error: cashK.error || cashQuote.error || 'cash close missing',
     };
   } else if (
@@ -238,6 +270,7 @@ async function freezeInputs(symbol, opts = {}) {
     source: nasdaq.source || 'bitget-signal',
     tool: nasdaq.tool,
     note: nasdaq.ok ? nasdaq.note : nasdaq.note || nasdaq.error,
+    fallback_from: nasdaq.fallback_from,
   };
 
   const eventClass = {
@@ -365,6 +398,14 @@ async function freezePeerPremiums(focus) {
           bitgetUs.fetchRtokenQuote(sym),
         ]);
         let cash = k.lastClose ?? q.prevClose ?? q.price;
+        let cashSrc = 'bitget-us';
+        if (cash == null) {
+          const y = await yahoo.fetchCashClose(sym);
+          if (y.ok) {
+            cash = y.lastClose;
+            cashSrc = y.source;
+          }
+        }
         let rt = r.ok ? r.price : null;
         let rSrc = r.source;
         if (rt == null) {
@@ -391,6 +432,7 @@ async function freezePeerPremiums(focus) {
           tag: p.ok ? tag : 'source_failed',
           rtoken_tool: r.tool,
           rtoken_source: rSrc,
+          cash_source: cashSrc,
         };
       } catch {
         out[sym] = { value: null, tag: 'source_failed' };

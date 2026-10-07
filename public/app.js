@@ -32,7 +32,8 @@
       freeze: data.freeze,
       band: data.band,
       symbol: data.symbol || data.freeze.symbol,
-      at: new Date().toISOString(),
+      at: data.lastRun ? data.freeze.asOf : new Date().toISOString(),
+      ...(data.lastRun ? { lastRun: true } : {}),
     });
     let ok = false;
     try {
@@ -516,19 +517,32 @@
     const saved = saveLastFreeze(data);
     $('emptyState').hidden = true;
     renderDataQuality(data.freeze);
-    paintFeedLine(data.freeze);
+    if (!data.lastRun) paintFeedLine(data.freeze);
     $('desk').hidden = false;
     const hint = $('freezeSavedHint');
     if (hint) {
       const sym = data.symbol || data.freeze?.symbol || '—';
       hint.hidden = false;
-      hint.textContent = saved
-        ? 'Freeze saved · ' + sym
-        : 'Freeze not saved in this browser.';
+      hint.textContent = data.lastRun
+        ? 'Live feed unavailable. Showing last live run · ' +
+          sym +
+          ' · ' +
+          (window.IWLastRun ? window.IWLastRun.fmtWat(data.freeze?.asOf) : data.freeze?.asOf || '')
+        : saved
+          ? 'Freeze saved · ' + sym
+          : 'Freeze not saved in this browser.';
     }
 
     setLamp(data.lamp);
-    startSessionTick(data.freeze);
+    if (data.lastRun) {
+      if (sessionTick) clearInterval(sessionTick);
+      sessionTick = null;
+      sessionFrozenAt = null;
+      updateFreezeAge();
+      $('clock').textContent = 'hours to cash open: —';
+    } else {
+      startSessionTick(data.freeze);
+    }
     markResultsArrive();
     {
       const st = data.status || data.band?.status;
@@ -560,6 +574,8 @@
     const briefingEl = $('briefing');
     if (data.briefing) {
       briefingEl.innerHTML = briefingHtml(data.briefing);
+    } else if (data.lastRun) {
+      briefingEl.innerHTML = '<span class="err">Research note not stored for this run.</span>';
     } else {
       // One compact muted line only — never stack a second fail-banner here.
       briefingEl.innerHTML =
@@ -800,6 +816,14 @@
           setProgress('Connection dropped — retrying once…');
           data = await postOnce();
         } else if (err._data) {
+          if (err._data.failureKind === 'missing_data' && window.IWLastRun) {
+            const stored = await window.IWLastRun.fetchStored(body.symbol);
+            if (stored) {
+              renderDesk(stored);
+              paintFeedLine(err._data.freeze || null);
+              return;
+            }
+          }
           showDeskFailure(err._data.ok === false ? null : err, err._data, err._res);
           return;
         } else {

@@ -11,6 +11,8 @@
     "node": "24.x"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.1",
+    "@vercel/functions": "^3.9.11",
     "dotenv": "^16.4.7",
     "express": "^4.21.2"
   },
