@@ -714,7 +714,72 @@
       .replace(/>/g, '&gt;');
   }
 
+  // A desk run starts only from a deliberate Run desk press.
+  // Guards against mobile ghost taps: a tap that lands on Run while the keyboard is
+  // open / closing (layout shifts under the finger), or a click with no matching press.
+  let deskRunning = false;
+  let lastEditBlurAt = 0;
+  let lastViewportResizeAt = 0;
+  let runPress = null;
+  const GHOST_MS = 400;
+  function isEditable(el) {
+    if (!el) return false;
+    if (el.tagName === 'TEXTAREA') return true;
+    if (el.tagName !== 'INPUT') return false;
+    return !['button', 'submit', 'checkbox', 'radio', 'range', 'reset'].includes(String(el.type || '').toLowerCase());
+  }
+  function armGhostGuards() {
+    document.addEventListener(
+      'focusout',
+      (e) => {
+        if (isEditable(e.target)) lastEditBlurAt = Date.now();
+      },
+      true
+    );
+    const onResize = () => {
+      lastViewportResizeAt = Date.now();
+    };
+    window.addEventListener('resize', onResize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+    $('runBtn').addEventListener('pointerdown', (e) => {
+      runPress = {
+        at: Date.now(),
+        type: e.pointerType || 'mouse',
+        editFocused: isEditable(document.activeElement),
+      };
+    });
+  }
+  function onRunClick(e) {
+    const now = Date.now();
+    if (deskRunning || $('runBtn').disabled) return;
+    const fromPointer = e && e.detail > 0; // keyboard Enter/Space on the button has detail 0
+    if (fromPointer) {
+      const press = runPress;
+      runPress = null;
+      if (!press || now - press.at > 1500) return; // click without a press on Run
+      if (press.type === 'touch' || press.type === 'pen') {
+        if (press.editFocused) {
+          // First tap while the keyboard is up only closes it.
+          if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+          return;
+        }
+        if (press.at - lastEditBlurAt < GHOST_MS || press.at - lastViewportResizeAt < GHOST_MS) return;
+      }
+    }
+    runDesk();
+  }
+
   async function runDesk() {
+    if (deskRunning) return;
+    deskRunning = true;
+    try {
+      await runDeskInner();
+    } finally {
+      deskRunning = false;
+    }
+  }
+
+  async function runDeskInner() {
     const btn = $('runBtn');
     const progress = $('runProgress');
     btn.disabled = true;
@@ -912,7 +977,8 @@
   }
 
   function wireDesk() {
-    $('runBtn').addEventListener('click', runDesk);
+    armGhostGuards();
+    $('runBtn').addEventListener('click', onRunClick);
     $('copyReceipt').addEventListener('click', async () => {
       const text = $('receiptBox').textContent;
       if (!text) return;
