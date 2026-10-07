@@ -392,15 +392,25 @@ async function freezePeerPremiums(focus) {
   await Promise.all(
     peers.map(async (sym) => {
       try {
-        const [k, q, r] = await Promise.all([
-          bitgetUs.fetchKlines(sym, '1d', 2),
-          bitgetUs.fetchQuote(sym),
-          bitgetUs.fetchRtokenQuote(sym),
-        ]);
+        // Fallbacks start in parallel so a slow MCP failure cannot eat the peer budget.
+        const yP = yahoo.fetchCashClose(sym);
+        const rrP = bitgetRest.fetchRtokenQuote(sym);
+        yP.catch(() => {});
+        rrP.catch(() => {});
+        const mcpFail = { ok: false, tag: 'source_failed', source: 'bitget-us', error: 'peer mcp timeout' };
+        const [k, q, r] = await withTimeout(
+          Promise.all([
+            bitgetUs.fetchKlines(sym, '1d', 2),
+            bitgetUs.fetchQuote(sym),
+            bitgetUs.fetchRtokenQuote(sym),
+          ]),
+          Number(process.env.PEER_MCP_TIMEOUT_MS) || 6000,
+          [mcpFail, mcpFail, mcpFail]
+        );
         let cash = k.lastClose ?? q.prevClose ?? q.price;
         let cashSrc = 'bitget-us';
         if (cash == null) {
-          const y = await yahoo.fetchCashClose(sym);
+          const y = await yP;
           if (y.ok) {
             cash = y.lastClose;
             cashSrc = y.source;
@@ -409,7 +419,7 @@ async function freezePeerPremiums(focus) {
         let rt = r.ok ? r.price : null;
         let rSrc = r.source;
         if (rt == null) {
-          const rr = await bitgetRest.fetchRtokenQuote(sym);
+          const rr = await rrP;
           if (rr.ok) {
             rt = rr.price;
             rSrc = rr.source;
