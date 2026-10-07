@@ -46,6 +46,7 @@ function buildReceipt({ freeze, band, twin, factor, size, stress }) {
     `symbol: ${freeze.symbol}`,
     `as_of: ${freeze.asOf}`,
     `premium: ${fmtPct(band.premium)} (tag=${freeze.premium?.tag || '?'})`,
+    `price_sources: cash=${freeze.cashClose?.source || '?'} rtoken=${freeze.rtoken?.source || '?'} book=${freeze.bookSpread?.source || '?'} btc=${freeze.btc24hReturn?.source || '?'}`,
     `band: lo=${fmtPct(band.implied_gap_lo)} mid=${fmtPct(band.implied_gap_mid)} hi=${fmtPct(band.implied_gap_hi)}`,
     `status: ${primaryStatus}`,
     `lamp: ${lamp}`,

@@ -11,6 +11,7 @@ const {
   hoursToNextUsCashOpen,
   listSymbols,
 } = require('../shared/rtoken');
+const bitgetRest = require('../shared/bitget-rest');
 const { EVENT_IMPORTANCE } = require('./solver');
 
 
@@ -92,6 +93,40 @@ async function freezeInputs(symbol, opts = {}) {
     ]);
   }
 
+  // Public REST fallback (no auth) when MCP price calls fail. Live only; no estimates.
+  {
+    const mcpErr = (x) => (x && x.error ? `mcp: ${x.error}` : 'mcp failed');
+    const restJobs = [];
+    if (!(rQuote && rQuote.ok && rQuote.price != null)) {
+      const prev = rQuote;
+      restJobs.push(
+        bitgetRest.fetchRtokenQuote(sym).then((r) => {
+          sources.push(tagSource('rtoken_quote_mcp', prev));
+          rQuote = r.ok ? { ...r, fallback_from: mcpErr(prev) } : { ...r, error: `${mcpErr(prev)} | ${r.error}` };
+        })
+      );
+    }
+    if (!(book && book.ok && Number.isFinite(book.spread))) {
+      const prev = book;
+      restJobs.push(
+        bitgetRest.fetchOrderBook(sym, 5).then((r) => {
+          sources.push(tagSource('rtoken_book_mcp', prev));
+          book = r.ok ? { ...r, fallback_from: mcpErr(prev) } : { ...r, error: `${mcpErr(prev)} | ${r.error}` };
+        })
+      );
+    }
+    if (!(btc && btc.ok && btc.value != null)) {
+      const prev = btc;
+      restJobs.push(
+        bitgetRest.fetchBtc24hReturn().then((r) => {
+          sources.push(tagSource('btc_24h_primary', prev));
+          if (r.ok) btc = { ...r, fallback_from: prev && prev.error ? String(prev.error).slice(0, 160) : 'primary failed' };
+        })
+      );
+    }
+    await Promise.all(restJobs);
+  }
+
   sources.push(tagSource('cash_klines', cashK));
   sources.push(tagSource('cash_quote', cashQuote));
   sources.push(tagSource('rtoken_quote', rQuote));
@@ -132,11 +167,12 @@ async function freezeInputs(symbol, opts = {}) {
   let rtoken = {
     value: rQuote.ok && rQuote.price != null ? rQuote.price : null,
     tag: rQuote.ok && rQuote.price != null ? 'observed' : rQuote.tag || 'source_failed',
-    source: 'bitget-us',
+    source: rQuote.source || 'bitget-us',
     tool: rQuote.tool,
     instrument: rQuote.instrument || rQuote.pair || null,
     exchange: rQuote.exchange || null,
     note: rQuote.note,
+    fallback_from: rQuote.fallback_from,
   };
   if (rtoken.value == null) {
     rtoken = {
@@ -147,7 +183,7 @@ async function freezeInputs(symbol, opts = {}) {
       instrument: rQuote.instrument || rQuote.pair || null,
       exchange: rQuote.exchange || null,
       note:
-        'MCP rToken quote unavailable; no equity or cash×premium proxy invented. ' +
+        'MCP and Bitget REST rToken quote unavailable; no equity or cash×premium proxy invented. ' +
         (rQuote.error || rQuote.note || ''),
       error: rQuote.error || 'rtoken quote missing',
     };
@@ -186,6 +222,7 @@ async function freezeInputs(symbol, opts = {}) {
     tag: btc.ok && btc.value != null ? (btc.tag || 'observed') : (btc.tag || 'assumed'),
     source: btc.source || 'bitget-signal',
     tool: btc.tool,
+    fallback_from: btc.fallback_from,
     note: btc.ok && btc.value != null
       ? btc.note
       : btc.note || btc.error || 'BTC residual unavailable; using 0 (assumed).',
@@ -228,7 +265,7 @@ async function freezeInputs(symbol, opts = {}) {
     thinWrapper = {
       value: Boolean(opts.thinWrapper) || thinBySpread || thinByDepth,
       tag: 'observed',
-      source: 'bitget-us',
+      source: book.source || 'bitget-us',
       tool: book.tool,
       note: `From futures order book: spread=${(spread * 10000).toFixed(1)}bps, top5 notional≈${
         Number.isFinite(depth) ? depth.toFixed(0) : 'n/a'
@@ -237,13 +274,13 @@ async function freezeInputs(symbol, opts = {}) {
     bookSpread = {
       value: spread,
       tag: 'observed',
-      source: 'bitget-us',
+      source: book.source || 'bitget-us',
       tool: book.tool,
     };
     bookDepth = {
       value: Number.isFinite(depth) ? depth : null,
       tag: Number.isFinite(depth) ? 'observed' : 'source_failed',
-      source: 'bitget-us',
+      source: book.source || 'bitget-us',
       tool: book.tool,
     };
   } else {
@@ -329,6 +366,14 @@ async function freezePeerPremiums(focus) {
         ]);
         let cash = k.lastClose ?? q.prevClose ?? q.price;
         let rt = r.ok ? r.price : null;
+        let rSrc = r.source;
+        if (rt == null) {
+          const rr = await bitgetRest.fetchRtokenQuote(sym);
+          if (rr.ok) {
+            rt = rr.price;
+            rSrc = rr.source;
+          }
+        }
         if (cash == null || rt == null) {
           out[sym] = {
             value: null,
@@ -338,13 +383,14 @@ async function freezePeerPremiums(focus) {
           };
           return;
         }
-        let tag = r.ok ? 'observed' : 'assumed';
-        if (r.tag === 'assumed') tag = 'assumed';
+        let tag = r.ok || rSrc === 'bitget-rest' ? 'observed' : 'assumed';
+        if (r.ok && r.tag === 'assumed') tag = 'assumed';
         const p = premium(rt, cash);
         out[sym] = {
           value: p.ok ? p.value : null,
           tag: p.ok ? tag : 'source_failed',
           rtoken_tool: r.tool,
+          rtoken_source: rSrc,
         };
       } catch {
         out[sym] = { value: null, tag: 'source_failed' };
