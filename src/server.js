@@ -95,7 +95,7 @@ app.get('/api/last-run', async (req, res) => {
   const out = await lastRun.loadLastRun(symbol);
   if (!out.ok) return res.status(out.status || 404).json({ ok: false, symbol, error: out.error });
   res.set('Cache-Control', 'no-store');
-  res.json({ ...out.record, ok: true, lastRun: true });
+  res.json(sanitizeObject({ ...out.record, ok: true, lastRun: true }));
 });
 
 app.get('/api/sample-freeze', (_req, res) => {
@@ -657,7 +657,7 @@ function styleHorizonLine(style) {
   if (style === 'intraday_wrapper') {
     return 'near-term wrapper room into the next cash open or same-session print';
   }
-  return 'overnight or multi-session hold into the next US cash open (any day, not Monday-only)';
+  return 'overnight or multi-session hold into the next US cash open';
 }
 
 /**
@@ -831,7 +831,7 @@ async function askQwenBriefing(ctx) {
   const system =
     'Implied World desk note. JSON only: evidence, implied_world, stress, considerations, invalidation. ' +
     'Senior overnight rToken desk voice: calm, specific, persuasive. One or two sentences per key. ' +
-    'Cite table percents. Frame to the next US cash open for the style — not Monday-only. ' +
+    'Cite table percents. Frame to the next US cash open for the style; do not name weekdays. ' +
     'Name assumed/source_failed tags. No BUY/SELL/LONG/SHORT. No hype. No invented prices.';
 
   const user =

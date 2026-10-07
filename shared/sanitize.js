@@ -56,6 +56,10 @@ function sanitizeText(str) {
   for (const re of FORBIDDEN) {
     out = out.replace(re, replaceToken);
   }
+  // Desk frames to the next US cash open; never name a weekday.
+  out = out.replace(/\s*\(?\s*any day,?\s*not Monday[- ]only\s*\)?/gi, '');
+  out = out.replace(/\s*[—-]\s*not Monday[- ]only\.?/gi, '.');
+  out = out.replace(/\bMonday(?:'s)?\b/gi, 'next session');
   // Second pass for residual bare tokens
   out = out.replace(/\b(BUY|SELL)\b/gi, REPLACEMENTS.BUY);
   out = out.replace(/\b(LONG|SHORT)\b/gi, (m) =>
